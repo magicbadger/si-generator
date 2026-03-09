@@ -104,3 +104,43 @@ export async function generateDockerPackage(
 
   return zip.generateAsync({ type: 'blob' });
 }
+
+export async function generateFolderExport(
+  meta: DocumentMeta,
+  services: Service[],
+  baseUrl: string,
+): Promise<Blob> {
+  const base = baseUrl.replace(/\/$/, '');
+  const zip = new JSZip();
+  const logosDir = zip.folder('logos')!;
+
+  const resolvedServices: Service[] = services.map((svc) => {
+    const shortName = svc.shortNames[0]?.value || 'service';
+    const slug = slugify(shortName);
+    const svcDir = logosDir.folder(slug)!;
+
+    const usedFilenames = new Set<string>();
+    const multimedia = svc.multimedia.map((mm) => {
+      if (!mm.url.startsWith('data:')) return mm;
+      const { bytes, ext } = dataUrlToBytes(mm.url);
+      const base_name = mm.width && mm.height
+        ? `logo-${mm.width}x${mm.height}.${ext}`
+        : `logo.${ext}`;
+      let filename = base_name;
+      let n = 1;
+      while (usedFilenames.has(filename)) {
+        filename = base_name.replace(`.${ext}`, `-${n}.${ext}`);
+        n++;
+      }
+      usedFilenames.add(filename);
+      svcDir.file(filename, bytes);
+      return { ...mm, url: `${base}/logos/${slug}/${filename}` };
+    });
+
+    return { ...svc, multimedia };
+  });
+
+  zip.file('SI.xml', generateXml(meta, resolvedServices));
+
+  return zip.generateAsync({ type: 'blob' });
+}

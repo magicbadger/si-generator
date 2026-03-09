@@ -20,10 +20,13 @@ import {
 import DownloadIcon from '@mui/icons-material/Download';
 import CodeIcon from '@mui/icons-material/Code';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
+import FolderZipIcon from '@mui/icons-material/FolderZip';
+import FactCheckIcon from '@mui/icons-material/FactCheck';
 import { useStore } from '../store';
 import { generateXml } from '../lib/xmlGenerate';
-import { generateDockerPackage } from '../lib/dockerExport';
+import { generateDockerPackage, generateFolderExport } from '../lib/dockerExport';
 import { XmlPreviewDialog } from '../components/XmlPreviewDialog';
+import { ValidationReportDialog } from '../components/ValidationReportDialog';
 
 export function StepReview() {
   const meta = useStore((s) => s.meta);
@@ -35,6 +38,26 @@ export function StepReview() {
   const [dockerOpen, setDockerOpen] = useState(false);
   const [baseUrl, setBaseUrl] = useState('http://localhost:8080');
   const [dockerBusy, setDockerBusy] = useState(false);
+  const [validateOpen, setValidateOpen] = useState(false);
+  const [folderOpen, setFolderOpen] = useState(false);
+  const [folderUrl, setFolderUrl] = useState('https://example.com/radio');
+  const [folderBusy, setFolderBusy] = useState(false);
+
+  const handleFolderExport = async () => {
+    setFolderBusy(true);
+    try {
+      const blob = await generateFolderExport(meta, services, folderUrl);
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'si-export.zip';
+      a.click();
+      URL.revokeObjectURL(url);
+      setFolderOpen(false);
+    } finally {
+      setFolderBusy(false);
+    }
+  };
 
   const hasDataUrlLogos = services.some((svc) =>
     svc.multimedia.some((mm) => mm.url.startsWith('data:'))
@@ -176,6 +199,24 @@ export function StepReview() {
         </Button>
         <Button
           variant="outlined"
+          color="info"
+          startIcon={<FactCheckIcon />}
+          onClick={() => setValidateOpen(true)}
+          disabled={services.length === 0}
+        >
+          Validate
+        </Button>
+        <Button
+          variant="outlined"
+          color="secondary"
+          startIcon={<FolderZipIcon />}
+          onClick={() => setFolderOpen(true)}
+          disabled={services.length === 0}
+        >
+          Export Folder
+        </Button>
+        <Button
+          variant="outlined"
           color="secondary"
           startIcon={<DownloadIcon />}
           onClick={() => setDockerOpen(true)}
@@ -235,6 +276,46 @@ export function StepReview() {
         xml={xml}
         onClose={() => setPreviewOpen(false)}
       />
+
+      <ValidationReportDialog
+        open={validateOpen}
+        xml={xml}
+        meta={meta}
+        services={services}
+        onClose={() => setValidateOpen(false)}
+      />
+
+      {/* Export Folder dialog */}
+      <Dialog open={folderOpen} onClose={() => setFolderOpen(false)} maxWidth="sm" fullWidth>
+        <DialogTitle>Export Folder</DialogTitle>
+        <DialogContent sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: 2 }}>
+          <Typography variant="body2">
+            Generates a ZIP with <code>SI.xml</code> and a <code>logos/</code> folder ready to
+            upload directly to your web server. Logo URLs in SI.xml will point to the base URL
+            you set below.
+          </Typography>
+          <TextField
+            label="Server base URL"
+            helperText="The URL where the files will be served from (e.g. https://example.com/radio)."
+            value={folderUrl}
+            onChange={(e) => setFolderUrl(e.target.value)}
+            size="small"
+            fullWidth
+            placeholder="https://example.com/radio"
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setFolderOpen(false)}>Cancel</Button>
+          <Button
+            variant="contained"
+            startIcon={<FolderZipIcon />}
+            onClick={handleFolderExport}
+            disabled={folderBusy || !folderUrl.trim()}
+          >
+            {folderBusy ? 'Generating…' : 'Download ZIP'}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 }
