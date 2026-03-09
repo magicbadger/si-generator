@@ -21,6 +21,7 @@ const STEPS = [
   'Service Names',
   'Descriptions',
   'Bearers',
+  'RadioDNS',
   'Logos',
   'Genre',
   'Keywords',
@@ -61,8 +62,8 @@ export function ProgressSidebar({
     if (step === 1) return validationErrors.some((e) => e.field === 'shortName' || e.field === 'mediumName' || e.field === 'longName');
     if (step === 2) return validationErrors.some((e) => e.field === 'shortDescription' || e.field === 'longDescription');
     if (step === 3) return validationErrors.some((e) => e.field === 'bearers' || e.field.startsWith('bearer.'));
-    if (step === 4) return validationErrors.some((e) => e.field.startsWith('multimedia.'));
-    if (step === 7) return validationErrors.some((e) => e.field.startsWith('link.'));
+    if (step === 5) return validationErrors.some((e) => e.field.startsWith('multimedia.'));
+    if (step === 8) return validationErrors.some((e) => e.field.startsWith('link.'));
     return false;
   };
 

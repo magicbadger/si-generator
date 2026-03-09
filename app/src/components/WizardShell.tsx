@@ -9,6 +9,7 @@ import { StepDocumentMeta } from '../steps/StepDocumentMeta';
 import { StepServiceNames } from '../steps/StepServiceNames';
 import { StepDescriptions } from '../steps/StepDescriptions';
 import { StepBearers } from '../steps/StepBearers';
+import { StepRadioDns } from '../steps/StepRadioDns';
 import { StepLogos } from '../steps/StepLogos';
 import { StepGenre } from '../steps/StepGenre';
 import { StepKeywords } from '../steps/StepKeywords';
@@ -20,6 +21,7 @@ const STEP_LABELS = [
   'Service Names',
   'Descriptions',
   'Bearers',
+  'RadioDNS',
   'Logos',
   'Genre',
   'Keywords',
@@ -32,6 +34,7 @@ const STEP_COMPONENTS = [
   StepServiceNames,
   StepDescriptions,
   StepBearers,
+  StepRadioDns,
   StepLogos,
   StepGenre,
   StepKeywords,

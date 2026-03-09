@@ -6,10 +6,15 @@ import {
   Card,
   CardContent,
   Chip,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
   Divider,
   List,
   ListItem,
   ListItemText,
+  TextField,
   Typography,
 } from '@mui/material';
 import DownloadIcon from '@mui/icons-material/Download';
@@ -17,6 +22,7 @@ import CodeIcon from '@mui/icons-material/Code';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import { useStore } from '../store';
 import { generateXml } from '../lib/xmlGenerate';
+import { generateDockerPackage } from '../lib/dockerExport';
 import { XmlPreviewDialog } from '../components/XmlPreviewDialog';
 
 export function StepReview() {
@@ -26,6 +32,13 @@ export function StepReview() {
   const [previewOpen, setPreviewOpen] = useState(false);
 
   const xml = generateXml(meta, services);
+  const [dockerOpen, setDockerOpen] = useState(false);
+  const [baseUrl, setBaseUrl] = useState('http://localhost:8080');
+  const [dockerBusy, setDockerBusy] = useState(false);
+
+  const hasDataUrlLogos = services.some((svc) =>
+    svc.multimedia.some((mm) => mm.url.startsWith('data:'))
+  );
 
   const handleDownload = () => {
     const blob = new Blob([xml], { type: 'application/xml;charset=utf-8' });
@@ -35,6 +48,22 @@ export function StepReview() {
     a.download = 'SI.xml';
     a.click();
     URL.revokeObjectURL(url);
+  };
+
+  const handleDockerExport = async () => {
+    setDockerBusy(true);
+    try {
+      const blob = await generateDockerPackage(meta, services, baseUrl);
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'si-docker-package.zip';
+      a.click();
+      URL.revokeObjectURL(url);
+      setDockerOpen(false);
+    } finally {
+      setDockerBusy(false);
+    }
   };
 
   const lang = meta.lang || 'en';
@@ -128,7 +157,7 @@ export function StepReview() {
 
       <Divider />
 
-      <Box sx={{ display: 'flex', gap: 2 }}>
+      <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
         <Button
           variant="contained"
           startIcon={<DownloadIcon />}
@@ -145,7 +174,57 @@ export function StepReview() {
         >
           Preview XML
         </Button>
+        <Button
+          variant="outlined"
+          color="secondary"
+          startIcon={<DownloadIcon />}
+          onClick={() => setDockerOpen(true)}
+          disabled={services.length === 0}
+        >
+          Export Docker Package
+        </Button>
       </Box>
+
+      {hasDataUrlLogos && (
+        <Alert severity="info">
+          This service has logos stored as embedded data. Use <strong>Export Docker Package</strong> to
+          bundle them into a self-contained server — the exported SI.xml will have proper URLs pointing
+          to the container.
+        </Alert>
+      )}
+
+      <Dialog open={dockerOpen} onClose={() => setDockerOpen(false)} maxWidth="sm" fullWidth>
+        <DialogTitle>Export Docker Package</DialogTitle>
+        <DialogContent sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: 2 }}>
+          <Typography variant="body2">
+            The package contains your logos, a generated <code>SI.xml</code> with proper URLs,
+            a <code>Dockerfile</code>, and an <code>nginx.conf</code>. Build and run with:
+          </Typography>
+          <Box component="pre" sx={{ bgcolor: 'grey.100', p: 1.5, borderRadius: 1, fontSize: '0.8rem', overflow: 'auto' }}>
+            {`docker build -t si-logo-server .\ndocker run -p 8080:80 si-logo-server`}
+          </Box>
+          <TextField
+            label="Server base URL"
+            helperText="The URL where the container will be reachable. Used to construct logo URLs in SI.xml."
+            value={baseUrl}
+            onChange={(e) => setBaseUrl(e.target.value)}
+            size="small"
+            fullWidth
+            placeholder="http://localhost:8080"
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setDockerOpen(false)}>Cancel</Button>
+          <Button
+            variant="contained"
+            startIcon={<DownloadIcon />}
+            onClick={handleDockerExport}
+            disabled={dockerBusy || !baseUrl.trim()}
+          >
+            {dockerBusy ? 'Generating…' : 'Download ZIP'}
+          </Button>
+        </DialogActions>
+      </Dialog>
 
       {services.length === 0 && (
         <Alert severity="info">Add at least one service to generate an SI.xml file.</Alert>

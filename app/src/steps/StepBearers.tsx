@@ -6,14 +6,10 @@ import {
   Alert,
   Box,
   Button,
-  Checkbox,
   Chip,
-  Divider,
-  FormControlLabel,
   IconButton,
   MenuItem,
   Select,
-  TextField,
   Typography,
 } from '@mui/material';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
@@ -22,7 +18,7 @@ import AddIcon from '@mui/icons-material/Add';
 import { v4 as uuidv4 } from 'uuid';
 import { useStore } from '../store';
 import { BearerForm } from '../components/BearerForm';
-import type { Bearer, RadioDNS } from '../store/types';
+import type { Bearer } from '../store/types';
 import { DABPLUS_MIME } from '../constants/mimeTypes';
 
 const BEARER_TYPES: Array<{ value: Bearer['type']; label: string }> = [
@@ -46,7 +42,6 @@ export function StepBearers() {
   const validate = useStore((s) => s.validate);
 
   const [addType, setAddType] = useState<Bearer['type']>('dab');
-  const [showRadioDns, setShowRadioDns] = useState(false);
 
   const svc = services.find((s) => s.id === activeServiceId);
   if (!svc) return <Alert severity="info">Add a service first using the sidebar.</Alert>;
@@ -74,18 +69,6 @@ export function StepBearers() {
     });
     validate();
   };
-
-  const updateRadioDns = (changes: Partial<RadioDNS>) => {
-    updateService(svc.id, { radiodns: { ...(svc.radiodns ?? { fqdn: '', serviceIdentifier: '' }), ...changes } });
-    validate();
-  };
-
-  const removeRadioDns = () => {
-    updateService(svc.id, { radiodns: undefined });
-    validate();
-  };
-
-  const hasRadioDns = !!svc.radiodns;
 
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
@@ -138,48 +121,6 @@ export function StepBearers() {
         </Button>
       </Box>
 
-      <Divider />
-
-      <Box>
-        <FormControlLabel
-          control={
-            <Checkbox
-              checked={hasRadioDns}
-              onChange={(e) => {
-                if (e.target.checked) {
-                  setShowRadioDns(true);
-                  updateService(svc.id, { radiodns: { fqdn: '', serviceIdentifier: '' } });
-                } else {
-                  removeRadioDns();
-                  setShowRadioDns(false);
-                }
-              }}
-            />
-          }
-          label="Add RadioDNS element (for hybrid service following)"
-        />
-        {hasRadioDns && (
-          <Box sx={{ display: 'flex', gap: 2, mt: 1, flexWrap: 'wrap' }}>
-            <TextField
-              label="FQDN"
-              placeholder="bbc.co.uk"
-              value={svc.radiodns?.fqdn ?? ''}
-              size="small"
-              sx={{ width: 280 }}
-              onChange={(e) => updateRadioDns({ fqdn: e.target.value })}
-            />
-            <TextField
-              label="Service Identifier (1-16 lowercase alphanumeric)"
-              placeholder="radio2"
-              value={svc.radiodns?.serviceIdentifier ?? ''}
-              size="small"
-              sx={{ width: 300 }}
-              inputProps={{ maxLength: 16 }}
-              onChange={(e) => updateRadioDns({ serviceIdentifier: e.target.value.replace(/[^a-z0-9]/g, '').slice(0, 16) })}
-            />
-          </Box>
-        )}
-      </Box>
     </Box>
   );
 }

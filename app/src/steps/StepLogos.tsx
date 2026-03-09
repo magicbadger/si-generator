@@ -1,23 +1,33 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Alert,
   Box,
   Button,
-  FormControl,
+  Divider,
   IconButton,
-  InputLabel,
-  MenuItem,
-  Select,
-  TextField,
   Typography,
 } from '@mui/material';
-import AddIcon from '@mui/icons-material/Add';
+import AutoFixHighIcon from '@mui/icons-material/AutoFixHigh';
 import DeleteIcon from '@mui/icons-material/Delete';
-import { v4 as uuidv4 } from 'uuid';
 import { useStore } from '../store';
 import { LogoPreview } from '../components/LogoPreview';
+import { LogoWorkshop } from '../components/LogoWorkshop';
 import type { Multimedia } from '../store/types';
-import { IMAGE_MIMES } from '../constants/mimeTypes';
+
+// Sort logos smallest → largest by pixel area
+function logoArea(mm: Multimedia): number {
+  if (mm.logoType === 'logo_colour_square') return 32 * 32;
+  if (mm.logoType === 'logo_colour_rectangle') return 112 * 32;
+  return (mm.width ?? 0) * (mm.height ?? 0);
+}
+
+function dataUrlKb(dataUrl: string): string {
+  if (!dataUrl.startsWith('data:')) return '';
+  const b64 = dataUrl.split(',')[1] ?? '';
+  const padding = (b64.match(/=+$/) ?? [''])[0].length;
+  const bytes = (b64.length * 3) / 4 - padding;
+  return (bytes / 1024).toFixed(1) + ' KB';
+}
 
 export function StepLogos() {
   const services = useStore((s) => s.services);
@@ -25,128 +35,91 @@ export function StepLogos() {
   const updateService = useStore((s) => s.updateService);
   const validate = useStore((s) => s.validate);
   const validationErrors = useStore((s) => s.validationErrors);
+  const [workshopOpen, setWorkshopOpen] = useState(false);
 
   const svc = services.find((s) => s.id === activeServiceId);
-  if (!svc) return <Alert severity="info">Add a service first using the sidebar.</Alert>;
 
-  const addLogo = () => {
-    const mm: Multimedia = {
-      id: uuidv4(),
-      url: '',
-      logoType: 'logo_colour_square',
-    };
-    updateService(svc.id, { multimedia: [...svc.multimedia, mm] });
-  };
+  // Remove any empty-URL entries left over from the old manual-entry form
+  useEffect(() => {
+    if (svc && svc.multimedia.some((m) => !m.url)) {
+      updateService(svc.id, { multimedia: svc.multimedia.filter((m) => !!m.url) });
+    }
+  }, [svc?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  if (!svc) return <Alert severity="info">Add a service first using the sidebar.</Alert>;
 
   const removeLogo = (id: string) => {
     updateService(svc.id, { multimedia: svc.multimedia.filter((m) => m.id !== id) });
     validate();
   };
 
-  const updateLogo = (id: string, changes: Partial<Multimedia>) => {
-    updateService(svc.id, {
-      multimedia: svc.multimedia.map((m) => (m.id === id ? { ...m, ...changes } : m)),
-    });
+  const handleWorkshopAdd = (logos: Multimedia[]) => {
+    updateService(svc.id, { multimedia: [...svc.multimedia, ...logos] });
     validate();
   };
 
   const hasError = (id: string) =>
     validationErrors.some((e) => e.field === `multimedia.${id}`);
 
+  const sorted = [...svc.multimedia].sort((a, b) => logoArea(a) - logoArea(b));
+
   return (
-    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-      <Typography variant="h6">Logos</Typography>
-      <Typography variant="body2" color="text.secondary">
-        Logos are displayed on receivers. For IP delivery, recommended sizes are 32×32, 112×32, 128×128, 320×240, and 600×600 (PNG).
-      </Typography>
-
-      {svc.multimedia.map((mm) => (
-        <Box
-          key={mm.id}
-          sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 2, p: 2 }}
-        >
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
-            <Typography variant="subtitle2">Logo</Typography>
-            <IconButton size="small" onClick={() => removeLogo(mm.id)}>
-              <DeleteIcon fontSize="small" />
-            </IconButton>
-          </Box>
-
-          <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', alignItems: 'flex-start' }}>
-            {mm.url && <LogoPreview logo={mm} hasError={hasError(mm.id)} />}
-
-            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, flex: 1, minWidth: 280 }}>
-              <TextField
-                label="Logo URL"
-                value={mm.url}
-                onChange={(e) => updateLogo(mm.id, { url: e.target.value })}
-                size="small"
-                fullWidth
-                placeholder="https://example.com/logo.png"
-              />
-
-              <FormControl size="small" sx={{ maxWidth: 280 }}>
-                <InputLabel>Logo Type</InputLabel>
-                <Select
-                  value={mm.logoType}
-                  label="Logo Type"
-                  onChange={(e) => {
-                    const lt = e.target.value as Multimedia['logoType'];
-                    // Clear forbidden attrs for typed logos
-                    const clear = lt !== 'logo_unrestricted'
-                      ? { mimeValue: undefined, width: undefined, height: undefined }
-                      : {};
-                    updateLogo(mm.id, { logoType: lt, ...clear });
-                  }}
-                >
-                  <MenuItem value="logo_colour_square">logo_colour_square (32×32)</MenuItem>
-                  <MenuItem value="logo_colour_rectangle">logo_colour_rectangle (112×32)</MenuItem>
-                  <MenuItem value="logo_unrestricted">logo_unrestricted (custom)</MenuItem>
-                </Select>
-              </FormControl>
-
-              {mm.logoType === 'logo_unrestricted' && (
-                <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
-                  <TextField
-                    label="Width (px)"
-                    type="number"
-                    value={mm.width || ''}
-                    size="small"
-                    sx={{ width: 120 }}
-                    inputProps={{ min: 1 }}
-                    onChange={(e) => updateLogo(mm.id, { width: parseInt(e.target.value) || undefined })}
-                  />
-                  <TextField
-                    label="Height (px)"
-                    type="number"
-                    value={mm.height || ''}
-                    size="small"
-                    sx={{ width: 120 }}
-                    inputProps={{ min: 1 }}
-                    onChange={(e) => updateLogo(mm.id, { height: parseInt(e.target.value) || undefined })}
-                  />
-                  <FormControl size="small" sx={{ width: 160 }}>
-                    <InputLabel>MIME Type</InputLabel>
-                    <Select
-                      value={mm.mimeValue || ''}
-                      label="MIME Type"
-                      onChange={(e) => updateLogo(mm.id, { mimeValue: e.target.value })}
-                    >
-                      {IMAGE_MIMES.map((m) => (
-                        <MenuItem key={m} value={m}>{m}</MenuItem>
-                      ))}
-                    </Select>
-                  </FormControl>
-                </Box>
-              )}
-            </Box>
-          </Box>
+    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+      {/* Header row */}
+      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <Box>
+          <Typography variant="h6">Logos</Typography>
+          <Typography variant="body2" color="text.secondary">
+            Recommended sizes: 32×32, 112×32, 128×128, 320×240, 600×600 (PNG).
+          </Typography>
         </Box>
-      ))}
+        <Button
+          variant="contained"
+          startIcon={<AutoFixHighIcon />}
+          onClick={() => setWorkshopOpen(true)}
+          sx={{ flexShrink: 0, ml: 2 }}
+        >
+          Logo Workshop
+        </Button>
+      </Box>
 
-      <Button variant="outlined" startIcon={<AddIcon />} onClick={addLogo} sx={{ alignSelf: 'flex-start' }}>
-        Add logo
-      </Button>
+      <Divider />
+
+      {svc.multimedia.length === 0 ? (
+        <Alert severity="info">
+          No logos added yet. Open the Logo Workshop to generate all standard sizes from a single source image.
+        </Alert>
+      ) : (
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
+          {sorted.map((mm, idx) => (
+            <Box key={mm.id}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, py: 1.5 }}>
+                <LogoPreview logo={mm} hasError={hasError(mm.id)} />
+                <Box sx={{ flex: 1, minWidth: 0 }}>
+                  <Typography variant="caption" color="text.secondary" display="block" sx={{ wordBreak: 'break-all' }}>
+                    {mm.url.startsWith('data:') ? '(embedded — will be hosted via Docker export)' : mm.url}
+                  </Typography>
+                  {mm.url.startsWith('data:') && (
+                    <Typography variant="caption" color="text.secondary">
+                      {dataUrlKb(mm.url)}
+                    </Typography>
+                  )}
+                </Box>
+                <IconButton size="small" onClick={() => removeLogo(mm.id)}>
+                  <DeleteIcon fontSize="small" />
+                </IconButton>
+              </Box>
+              {idx < sorted.length - 1 && <Divider />}
+            </Box>
+          ))}
+        </Box>
+      )}
+
+      <LogoWorkshop
+        open={workshopOpen}
+        onClose={() => setWorkshopOpen(false)}
+        onAdd={handleWorkshopAdd}
+      />
     </Box>
   );
 }
