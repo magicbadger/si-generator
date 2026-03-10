@@ -68,10 +68,11 @@ function highlightXml(xml: string): React.ReactNode {
 interface Props {
   open: boolean;
   xml: string;
+  title?: string;
   onClose: () => void;
 }
 
-export function XmlPreviewDialog({ open, xml, onClose }: Props) {
+export function XmlPreviewDialog({ open, xml, title = 'XML Preview', onClose }: Props) {
   const handleCopy = () => {
     navigator.clipboard.writeText(xml);
   };
@@ -79,7 +80,7 @@ export function XmlPreviewDialog({ open, xml, onClose }: Props) {
   return (
     <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth>
       <DialogTitle sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        XML Preview
+        {title}
         <Box sx={{ display: 'flex', gap: 1 }}>
           <IconButton size="small" onClick={handleCopy} title="Copy to clipboard">
             <ContentCopyIcon fontSize="small" />

@@ -43,7 +43,7 @@ export function RadioDnsRetrieve({ onIngested }: Props) {
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
 
-  const { resetAll, setMeta, addService, updateService, setActiveService, setNav } = useStore();
+  const { resetAll, setMeta, addService, updateService, setActiveService, setNav, setSource } = useStore();
 
   const loadXml = (xml: string) => {
     const result = ingestXml(xml);
@@ -54,7 +54,8 @@ export function RadioDnsRetrieve({ onIngested }: Props) {
     for (const svc of result.services) {
       const id = addService();
       if (!firstId) firstId = id;
-      updateService(id, svc);
+      const { id: _id, ...svcData } = svc;
+      updateService(id, svcData);
     }
     if (firstId) setActiveService(firstId);
     setNav(firstId ? { view: 'service', serviceId: firstId, step: 0 } : { view: 'document' });
@@ -66,11 +67,12 @@ export function RadioDnsRetrieve({ onIngested }: Props) {
     setBusy(true);
     try {
       let xml: string;
+      let siUrl: string;
 
       if (mode === 'radiodns') {
         // Direct FQDN — skip CNAME, go straight to SRV
         setStatus('Discovering SPI application…');
-        const siUrl = await discoverSiUrl(directFqdn.trim());
+        siUrl = await discoverSiUrl(directFqdn.trim());
         setStatus(`Fetching SI.xml from ${siUrl}…`);
         xml = await fetchSiXml(siUrl, setStatus);
       } else {
@@ -81,13 +83,14 @@ export function RadioDnsRetrieve({ onIngested }: Props) {
         setStatus(`Resolving ${lookupName}…`);
         const authFqdn = await resolveAuthFqdn(lookupName);
         setStatus(`Found ${authFqdn}. Discovering SPI application…`);
-        const siUrl = await discoverSiUrl(authFqdn);
+        siUrl = await discoverSiUrl(authFqdn);
         setStatus(`Fetching SI.xml from ${siUrl}…`);
         xml = await fetchSiXml(siUrl, setStatus);
       }
 
       setStatus('Importing…');
       loadXml(xml);
+      setSource(siUrl, xml);
       onIngested?.();
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));

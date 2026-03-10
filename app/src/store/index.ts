@@ -34,9 +34,13 @@ export const useStore = create<SIStore>()(
       activeServiceId: null,
       nav: { view: 'document' } as NavState,
       validationErrors: [],
+      sourceUrl: null,
+      sourceXml: null,
 
       setMeta: (meta) =>
         set((s) => ({ meta: { ...s.meta, ...meta } })),
+
+      setSource: (url, xml) => set({ sourceUrl: url, sourceXml: xml }),
 
       addService: () => {
         const svc = newService();
@@ -96,6 +100,8 @@ export const useStore = create<SIStore>()(
           activeServiceId: null,
           nav: { view: 'document' } as NavState,
           validationErrors: [],
+          sourceUrl: null,
+          sourceXml: null,
         }),
     }),
     {

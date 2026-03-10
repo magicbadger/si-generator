@@ -78,7 +78,10 @@ export interface SIStore {
   activeServiceId: string | null;
   nav: NavState;
   validationErrors: ValidationError[];
+  sourceUrl: string | null;
+  sourceXml: string | null;
   setMeta: (meta: Partial<DocumentMeta>) => void;
+  setSource: (url: string, xml: string) => void;
   addService: () => string;
   updateService: (id: string, update: Partial<Service>) => void;
   removeService: (id: string) => void;

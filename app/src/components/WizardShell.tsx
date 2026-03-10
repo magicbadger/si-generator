@@ -1,6 +1,7 @@
-import { Box, Button, Paper, Typography } from '@mui/material';
+import { Box, Button, Paper, Tab, Tabs } from '@mui/material';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
+import WarningAmberIcon from '@mui/icons-material/WarningAmber';
 import { useStore } from '../store';
 import type { NavState } from '../store/types';
 import type { Service } from '../store/types';
@@ -17,7 +18,7 @@ import { StepKeywords } from '../steps/StepKeywords';
 import { StepLinks } from '../steps/StepLinks';
 import { StepReview } from '../steps/StepReview';
 
-const SIDEBAR_WIDTH = 260;
+const SIDEBAR_WIDTH = 220;
 
 const SERVICE_STEPS = 8;
 
@@ -84,16 +85,6 @@ function nextLabel(nav: NavState, services: Service[], lang: string): string {
   return '';
 }
 
-function getBreadcrumb(nav: NavState, services: Service[], lang: string): string {
-  if (nav.view === 'document') return 'Document Info';
-  if (nav.view === 'export') return 'Review & Export';
-  if (nav.view === 'service') {
-    const svc = services.find(s => s.id === nav.serviceId);
-    const svcName = svc ? svcDisplayName(svc, lang) : 'Service';
-    return `${svcName} › ${STEP_LABELS[nav.step]}`;
-  }
-  return '';
-}
 
 export function WizardShell() {
   const nav = useStore((s) => s.nav);
@@ -125,7 +116,6 @@ export function WizardShell() {
   const prev = prevNav(nav, services);
   const next = nextNav(nav, services);
   const label = nextLabel(nav, services, lang);
-  const breadcrumb = getBreadcrumb(nav, services, lang);
 
   let StepComponent: React.ComponentType;
   if (nav.view === 'document') {
@@ -161,27 +151,56 @@ export function WizardShell() {
       </Paper>
 
       {/* Main content */}
-      <Box
-        sx={{
-          flex: 1,
-          display: 'flex',
-          flexDirection: 'column',
-          overflowY: 'auto',
-          bgcolor: 'background.default',
-        }}
-      >
-        <Box sx={{ p: 3, flex: 1 }}>
-          <Typography variant="caption" color="text.secondary">
-            {breadcrumb}
-          </Typography>
+      <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
 
-          <ValidationBanner
-            errors={validationErrors}
-            services={services}
-            lang={lang}
-          />
+        {/* Service step tabs */}
+        {nav.view === 'service' && (
+          <Box sx={{ borderBottom: 1, borderColor: 'divider', bgcolor: 'background.paper', flexShrink: 0 }}>
+            <Tabs
+              value={nav.step}
+              onChange={(_, v) => setNav({ view: 'service', serviceId: nav.serviceId, step: v as number })}
+              variant="scrollable"
+              scrollButtons="auto"
+              sx={{ px: 2 }}
+            >
+              {STEP_LABELS.map((label, idx) => {
+                const hasErr = validationErrors.some(e => {
+                  if (e.serviceId !== nav.serviceId) return false;
+                  if (idx === 0) return e.field === 'shortName' || e.field === 'mediumName';
+                  if (idx === 1) return e.field === 'shortDescription' || e.field === 'longDescription';
+                  if (idx === 2) return e.field === 'bearers' || e.field.startsWith('bearer.');
+                  if (idx === 3) return e.field === 'radiodns.serviceIdentifier';
+                  if (idx === 4) return e.field.startsWith('multimedia.');
+                  if (idx === 7) return e.field.startsWith('link.');
+                  return false;
+                });
+                return (
+                  <Tab
+                    key={idx}
+                    value={idx}
+                    label={
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                        {label}
+                        {hasErr && <WarningAmberIcon sx={{ fontSize: 12, color: 'error.main' }} />}
+                      </Box>
+                    }
+                  />
+                );
+              })}
+            </Tabs>
+          </Box>
+        )}
 
-          <StepComponent />
+        <Box sx={{ flex: 1, overflowY: 'auto', bgcolor: 'background.default' }}>
+          <Box sx={{ p: 3 }}>
+            <ValidationBanner
+              errors={validationErrors}
+              services={services}
+              lang={lang}
+            />
+
+            <StepComponent />
+          </Box>
         </Box>
 
         {/* Navigation footer */}

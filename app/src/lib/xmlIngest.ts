@@ -96,12 +96,22 @@ export function ingestXml(xmlString: string): IngestResult {
       value: typeof n === 'string' ? n : (n['#text'] as string) || '',
     }));
 
-    const shortDescs = asArray(svcRaw['shortDescription']).map((d: Record<string, unknown>) => ({
+    // Descriptions and multimedia are wrapped in <mediaDescription> per ETSI TS 102 818,
+    // but some implementations also place them directly on the service node — handle both.
+    const mediaDescNodes = asArray(svcRaw['mediaDescription']);
+
+    const shortDescs = [
+      ...asArray(svcRaw['shortDescription']),
+      ...mediaDescNodes.flatMap((md) => asArray((md as Record<string, unknown>)['shortDescription'])),
+    ].map((d: Record<string, unknown>) => ({
       lang: (d['@_xml:lang'] as string) || meta.lang,
       value: typeof d === 'string' ? d : (d['#text'] as string) || '',
     }));
 
-    const longDescs = asArray(svcRaw['longDescription']).map((d: Record<string, unknown>) => ({
+    const longDescs = [
+      ...asArray(svcRaw['longDescription']),
+      ...mediaDescNodes.flatMap((md) => asArray((md as Record<string, unknown>)['longDescription'])),
+    ].map((d: Record<string, unknown>) => ({
       lang: (d['@_xml:lang'] as string) || meta.lang,
       value: typeof d === 'string' ? d : (d['#text'] as string) || '',
     }));
@@ -110,7 +120,7 @@ export function ingestXml(xmlString: string): IngestResult {
       parseBearer(b as Record<string, string>)
     ).filter(Boolean) as Bearer[];
 
-    const multimediaList = asArray(svcRaw['mediaDescription']).flatMap((md) => {
+    const multimediaList = mediaDescNodes.flatMap((md) => {
       const mmNode = (md as Record<string, unknown>)['multimedia'];
       return asArray(mmNode).map((mm) => parseMultimedia(mm as Record<string, string>));
     });
