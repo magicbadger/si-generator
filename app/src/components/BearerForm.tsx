@@ -1,4 +1,4 @@
-import React from 'react';
+import { useState } from 'react';
 import {
   Box,
   FormControl,
@@ -43,10 +43,10 @@ function parseFmUri(uri: string) {
 
 function DabBearerForm({ bearer, onChange }: Props) {
   const parsed = parseDabUri(bearer.uri);
-  const [ecc, setEcc] = React.useState(parsed?.ecc ?? '');
-  const [eid, setEid] = React.useState(parsed?.eid ?? '');
-  const [sid, setSid] = React.useState(parsed?.sid ?? '');
-  const [scids, setScids] = React.useState(parsed?.scids ?? 0);
+  const [ecc, setEcc] = useState(parsed?.ecc ?? '');
+  const [eid, setEid] = useState(parsed?.eid ?? '');
+  const [sid, setSid] = useState(parsed?.sid ?? '');
+  const [scids, setScids] = useState(parsed?.scids ?? 0);
 
   const pushUri = (newEcc: string, newEid: string, newSid: string, newScids: number) => {
     onChange({ uri: buildDabUri(newEcc, newEid, newSid, newScids) });
@@ -140,9 +140,9 @@ function DabBearerForm({ bearer, onChange }: Props) {
 
 function FmBearerForm({ bearer, onChange }: Props) {
   const parsed = parseFmUri(bearer.uri);
-  const [cc, setCc] = React.useState(parsed?.cc ?? '');
-  const [pi, setPi] = React.useState(parsed?.pi ?? '');
-  const [freq, setFreq] = React.useState(parsed?.freq ?? '');
+  const [cc, setCc] = useState(parsed?.cc ?? '');
+  const [pi, setPi] = useState(parsed?.pi ?? '');
+  const [freq, setFreq] = useState(parsed?.freq ?? '');
 
   const pushUri = (newCc: string, newPi: string, newFreq: string) => {
     onChange({ uri: `fm:${newCc}.${newPi}.${newFreq}` });

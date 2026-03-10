@@ -1,4 +1,3 @@
-import React from 'react';
 import {
   Alert,
   Box,
@@ -53,7 +52,7 @@ export function StepRadioDns() {
             <TextField
               label="Authoritative FQDN"
               placeholder="bbc.co.uk"
-              value={svc.radiodns.fqdn}
+              value={svc.radiodns?.fqdn ?? ''}
               size="small"
               sx={{ width: 280 }}
               onChange={(e) => updateRadioDns({ fqdn: e.target.value })}
@@ -61,7 +60,7 @@ export function StepRadioDns() {
             <TextField
               label="Service Identifier (1–16 lowercase alphanumeric)"
               placeholder="radio2"
-              value={svc.radiodns.serviceIdentifier}
+              value={svc.radiodns?.serviceIdentifier ?? ''}
               size="small"
               sx={{ width: 320 }}
               inputProps={{ maxLength: 16 }}
@@ -72,7 +71,7 @@ export function StepRadioDns() {
               }
             />
           </Box>
-          {svc.radiodns.fqdn && svc.radiodns.serviceIdentifier && (
+          {svc.radiodns?.fqdn && svc.radiodns?.serviceIdentifier && (
             <Typography variant="caption" color="text.secondary">
               Lookup FQDN:{' '}
               <code>

@@ -106,14 +106,6 @@ export function validateStore(meta: DocumentMeta, services: Service[]): Validati
           suggestion: 'Set mimeValue to audio/mpeg (DAB) or audio/aacp (DAB+).',
         });
       }
-      if (bearer.type === 'dabplus' && !bearer.mimeValue) {
-        errors.push({
-          serviceId: sid,
-          field: `bearer.${bearer.id}.mimeValue`,
-          message: 'DAB+ bearer is missing mimeValue.',
-          suggestion: 'Set mimeValue to audio/aacp for DAB+.',
-        });
-      }
       if ((bearer.type === 'ip_stream' || bearer.type === 'ip_playlist') && !bearer.mimeValue) {
         errors.push({
           serviceId: sid,

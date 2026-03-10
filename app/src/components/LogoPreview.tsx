@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { Box, Card, CardContent, Chip, Typography } from '@mui/material';
 import BrokenImageIcon from '@mui/icons-material/BrokenImage';
 import WarningAmberIcon from '@mui/icons-material/WarningAmber';

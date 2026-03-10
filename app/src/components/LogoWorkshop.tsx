@@ -297,10 +297,10 @@ export function LogoWorkshop({ open, onClose, onAdd }: Props) {
     reader.readAsDataURL(file);
   }, [loadSource]);
 
-  const handleDrop = useCallback((e: React.DragEvent) => {
+  const handleDrop = useCallback((e: React.DragEvent<HTMLElement>) => {
     e.preventDefault();
     setDragging(false);
-    const file = e.dataTransfer.files[0];
+    const file = e.dataTransfer?.files[0];
     if (file) handleFile(file);
   }, [handleFile]);
 

@@ -30,7 +30,7 @@ Open [http://localhost:5173](http://localhost:5173).
 ### Docker (the generator UI itself)
 
 ```bash
-docker-compose up --build
+docker compose up --build
 ```
 
 Open [http://localhost:8080](http://localhost:8080).
