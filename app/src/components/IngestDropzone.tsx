@@ -13,7 +13,7 @@ export function IngestDropzone({ onIngested }: Props) {
   const [error, setError] = useState<string | null>(null);
   const { setMeta, addService, updateService } = useStore();
   const resetAll = useStore((s) => s.resetAll);
-  const setStep = useStore((s) => s.setStep);
+  const setNav = useStore((s) => s.setNav);
   const setActiveService = useStore((s) => s.setActiveService);
 
   const processFile = useCallback(
@@ -39,13 +39,13 @@ export function IngestDropzone({ onIngested }: Props) {
           updateService(id, svc);
         }
         if (firstId) setActiveService(firstId);
-        setStep(0);
+        setNav({ view: 'document' });
         setError(null);
         onIngested?.();
       };
       reader.readAsText(file);
     },
-    [resetAll, setMeta, addService, updateService, setActiveService, setStep, onIngested]
+    [resetAll, setMeta, addService, updateService, setActiveService, setNav, onIngested]
   );
 
   const handleDrop = useCallback(

@@ -76,14 +76,19 @@ export interface SIStore {
   meta: DocumentMeta;
   services: Service[];
   activeServiceId: string | null;
-  currentStep: number;
+  nav: NavState;
   validationErrors: ValidationError[];
   setMeta: (meta: Partial<DocumentMeta>) => void;
   addService: () => string;
   updateService: (id: string, update: Partial<Service>) => void;
   removeService: (id: string) => void;
   setActiveService: (id: string | null) => void;
-  setStep: (step: number) => void;
+  setNav: (nav: NavState) => void;
   validate: () => void;
   resetAll: () => void;
 }
+
+export type NavState =
+  | { view: 'document' }
+  | { view: 'service'; serviceId: string; step: number }
+  | { view: 'export' };

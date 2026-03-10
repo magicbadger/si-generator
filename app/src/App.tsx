@@ -17,6 +17,7 @@ import RestartAltIcon from '@mui/icons-material/RestartAlt';
 import CloseIcon from '@mui/icons-material/Close';
 import { WizardShell } from './components/WizardShell';
 import { IngestDropzone } from './components/IngestDropzone';
+import { RadioDnsRetrieve } from './components/RadioDnsRetrieve';
 import { useStore } from './store';
 
 export default function App() {
@@ -25,7 +26,7 @@ export default function App() {
   const resetAll = useStore((s) => s.resetAll);
   const services = useStore((s) => s.services);
   const addService = useStore((s) => s.addService);
-  const setActiveService = useStore((s) => s.setActiveService);
+  const setNav = useStore((s) => s.setNav);
 
   const handleReset = () => {
     if (window.confirm('Reset all data and start over?')) {
@@ -36,7 +37,7 @@ export default function App() {
   const handleStart = () => {
     if (services.length === 0) {
       const id = addService();
-      setActiveService(id);
+      setNav({ view: 'service', serviceId: id, step: 0 });
     }
   };
 
@@ -102,7 +103,10 @@ export default function App() {
               Import SI.xml
             </Button>
           </Box>
-          <Box sx={{ mt: 2, maxWidth: 480, width: '100%' }}>
+          <Box sx={{ maxWidth: 480, width: '100%' }}>
+            <RadioDnsRetrieve onIngested={() => {}} />
+          </Box>
+          <Box sx={{ mt: 1, maxWidth: 480, width: '100%' }}>
             <IngestDropzone onIngested={() => setIngestOpen(false)} />
           </Box>
         </Box>

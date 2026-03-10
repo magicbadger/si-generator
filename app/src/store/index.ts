@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { v4 as uuidv4 } from 'uuid';
-import type { SIStore, DocumentMeta, Service } from './types';
+import type { SIStore, DocumentMeta, Service, NavState } from './types';
 import { validateStore } from '../lib/validate';
 
 const defaultMeta: DocumentMeta = {
@@ -32,7 +32,7 @@ export const useStore = create<SIStore>()(
       meta: defaultMeta,
       services: [],
       activeServiceId: null,
-      currentStep: 0,
+      nav: { view: 'document' } as NavState,
       validationErrors: [],
 
       setMeta: (meta) =>
@@ -61,18 +61,28 @@ export const useStore = create<SIStore>()(
       removeService: (id) =>
         set((s) => {
           const remaining = s.services.filter((svc) => svc.id !== id);
+          let nav: NavState = s.nav;
+          if (s.nav.view === 'service' && s.nav.serviceId === id) {
+            nav = remaining.length > 0
+              ? { view: 'service', serviceId: remaining[0].id, step: 0 }
+              : { view: 'document' };
+          }
           return {
             services: remaining,
             activeServiceId:
               s.activeServiceId === id
                 ? remaining[0]?.id ?? null
                 : s.activeServiceId,
+            nav,
           };
         }),
 
       setActiveService: (id) => set({ activeServiceId: id }),
 
-      setStep: (step) => set({ currentStep: step }),
+      setNav: (nav) => set((s) => ({
+        nav,
+        activeServiceId: nav.view === 'service' ? nav.serviceId : s.activeServiceId,
+      })),
 
       validate: () => {
         const errors = validateStore(get().meta, get().services);
@@ -84,7 +94,7 @@ export const useStore = create<SIStore>()(
           meta: { ...defaultMeta, creationTime: new Date().toISOString().slice(0, 19) + '+00:00' },
           services: [],
           activeServiceId: null,
-          currentStep: 0,
+          nav: { view: 'document' } as NavState,
           validationErrors: [],
         }),
     }),

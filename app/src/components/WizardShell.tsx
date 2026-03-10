@@ -2,6 +2,8 @@ import { Box, Button, Paper, Typography } from '@mui/material';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
 import { useStore } from '../store';
+import type { NavState } from '../store/types';
+import type { Service } from '../store/types';
 import { ProgressSidebar } from './ProgressSidebar';
 import { ValidationBanner } from './ValidationBanner';
 import { StepDocumentMeta } from '../steps/StepDocumentMeta';
@@ -15,21 +17,13 @@ import { StepKeywords } from '../steps/StepKeywords';
 import { StepLinks } from '../steps/StepLinks';
 import { StepReview } from '../steps/StepReview';
 
-const STEP_LABELS = [
-  'Document Info',
-  'Service Names',
-  'Descriptions',
-  'Bearers',
-  'RadioDNS',
-  'Logos',
-  'Genre',
-  'Keywords',
-  'Links',
-  'Review & Export',
-];
+const SIDEBAR_WIDTH = 260;
 
-const STEP_COMPONENTS = [
-  StepDocumentMeta,
+const SERVICE_STEPS = 8;
+
+const STEP_LABELS = ['Names', 'Descriptions', 'Bearers', 'RadioDNS', 'Logos', 'Genre', 'Keywords', 'Links'];
+
+const SERVICE_STEP_COMPONENTS = [
   StepServiceNames,
   StepDescriptions,
   StepBearers,
@@ -38,39 +32,109 @@ const STEP_COMPONENTS = [
   StepGenre,
   StepKeywords,
   StepLinks,
-  StepReview,
 ];
 
-const SIDEBAR_WIDTH = 220;
+function svcDisplayName(svc: Service, lang: string): string {
+  return svc.longNames.find(n => n.lang === lang)?.value ||
+    svc.longNames[0]?.value ||
+    svc.shortNames.find(n => n.lang === lang)?.value ||
+    svc.shortNames[0]?.value ||
+    'Untitled Service';
+}
+
+function nextNav(nav: NavState, services: Service[]): NavState | null {
+  if (nav.view === 'document') {
+    if (services.length === 0) return { view: 'export' };
+    return { view: 'service', serviceId: services[0].id, step: 0 };
+  }
+  if (nav.view === 'service') {
+    if (nav.step < SERVICE_STEPS - 1) return { view: 'service', serviceId: nav.serviceId, step: nav.step + 1 };
+    const idx = services.findIndex(s => s.id === nav.serviceId);
+    if (idx < services.length - 1) return { view: 'service', serviceId: services[idx + 1].id, step: 0 };
+    return { view: 'export' };
+  }
+  return null;
+}
+
+function prevNav(nav: NavState, services: Service[]): NavState | null {
+  if (nav.view === 'export') {
+    if (services.length === 0) return { view: 'document' };
+    return { view: 'service', serviceId: services[services.length - 1].id, step: SERVICE_STEPS - 1 };
+  }
+  if (nav.view === 'service') {
+    if (nav.step > 0) return { view: 'service', serviceId: nav.serviceId, step: nav.step - 1 };
+    const idx = services.findIndex(s => s.id === nav.serviceId);
+    if (idx > 0) return { view: 'service', serviceId: services[idx - 1].id, step: SERVICE_STEPS - 1 };
+    return { view: 'document' };
+  }
+  return null;
+}
+
+function nextLabel(nav: NavState, services: Service[], lang: string): string {
+  if (nav.view === 'document') {
+    if (services.length === 0) return 'Review & Export';
+    return svcDisplayName(services[0], lang);
+  }
+  if (nav.view === 'service') {
+    if (nav.step < SERVICE_STEPS - 1) return STEP_LABELS[nav.step + 1];
+    const idx = services.findIndex(s => s.id === nav.serviceId);
+    if (idx < services.length - 1) return svcDisplayName(services[idx + 1], lang);
+    return 'Review & Export';
+  }
+  return '';
+}
+
+function getBreadcrumb(nav: NavState, services: Service[], lang: string): string {
+  if (nav.view === 'document') return 'Document Info';
+  if (nav.view === 'export') return 'Review & Export';
+  if (nav.view === 'service') {
+    const svc = services.find(s => s.id === nav.serviceId);
+    const svcName = svc ? svcDisplayName(svc, lang) : 'Service';
+    return `${svcName} › ${STEP_LABELS[nav.step]}`;
+  }
+  return '';
+}
 
 export function WizardShell() {
-  const currentStep = useStore((s) => s.currentStep);
+  const nav = useStore((s) => s.nav);
   const services = useStore((s) => s.services);
-  const activeServiceId = useStore((s) => s.activeServiceId);
   const validationErrors = useStore((s) => s.validationErrors);
   const meta = useStore((s) => s.meta);
-  const setStep = useStore((s) => s.setStep);
-  const setActiveService = useStore((s) => s.setActiveService);
+  const setNav = useStore((s) => s.setNav);
   const addService = useStore((s) => s.addService);
   const validate = useStore((s) => s.validate);
 
-  const StepComponent = STEP_COMPONENTS[currentStep];
+  const lang = meta.lang || 'en';
 
   const handleNext = () => {
     validate();
-    if (currentStep < STEP_COMPONENTS.length - 1) {
-      setStep(currentStep + 1);
-    }
+    const next = nextNav(nav, services);
+    if (next) setNav(next);
   };
 
   const handleBack = () => {
-    if (currentStep > 0) setStep(currentStep - 1);
+    const prev = prevNav(nav, services);
+    if (prev) setNav(prev);
   };
 
   const handleAddService = () => {
     const id = addService();
-    setActiveService(id);
+    setNav({ view: 'service', serviceId: id, step: 0 });
   };
+
+  const prev = prevNav(nav, services);
+  const next = nextNav(nav, services);
+  const label = nextLabel(nav, services, lang);
+  const breadcrumb = getBreadcrumb(nav, services, lang);
+
+  let StepComponent: React.ComponentType;
+  if (nav.view === 'document') {
+    StepComponent = StepDocumentMeta;
+  } else if (nav.view === 'service') {
+    StepComponent = SERVICE_STEP_COMPONENTS[nav.step];
+  } else {
+    StepComponent = StepReview;
+  }
 
   return (
     <Box sx={{ display: 'flex', height: 'calc(100vh - 64px)' }}>
@@ -87,13 +151,11 @@ export function WizardShell() {
         }}
       >
         <ProgressSidebar
-          currentStep={currentStep}
+          nav={nav}
           services={services}
-          activeServiceId={activeServiceId}
           validationErrors={validationErrors}
-          lang={meta.lang || 'en'}
-          onStepClick={setStep}
-          onServiceClick={setActiveService}
+          lang={lang}
+          onNav={setNav}
           onAddService={handleAddService}
         />
       </Paper>
@@ -110,13 +172,13 @@ export function WizardShell() {
       >
         <Box sx={{ p: 3, flex: 1 }}>
           <Typography variant="caption" color="text.secondary">
-            Step {currentStep + 1} of {STEP_COMPONENTS.length}
+            {breadcrumb}
           </Typography>
 
           <ValidationBanner
             errors={validationErrors}
             services={services}
-            lang={meta.lang || 'en'}
+            lang={lang}
           />
 
           <StepComponent />
@@ -137,18 +199,18 @@ export function WizardShell() {
           <Button
             startIcon={<ArrowBackIcon />}
             onClick={handleBack}
-            disabled={currentStep === 0}
+            disabled={!prev}
             variant="outlined"
           >
             Back
           </Button>
-          {currentStep < STEP_COMPONENTS.length - 1 ? (
+          {next ? (
             <Button
               endIcon={<ArrowForwardIcon />}
               onClick={handleNext}
               variant="contained"
             >
-              Next: {STEP_LABELS[currentStep + 1]}
+              Next: {label}
             </Button>
           ) : null}
         </Box>
