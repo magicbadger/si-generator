@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import {
   Box,
+  Button,
+  Collapse,
   FormControl,
   InputLabel,
   MenuItem,
@@ -10,6 +12,7 @@ import {
 } from '@mui/material';
 import type { Bearer } from '../store/types';
 import { DAB_MIME, DABPLUS_MIME, IP_STREAM_MIMES, IP_PLAYLIST_MIMES } from '../constants/mimeTypes';
+import { ECC_BY_COUNTRY } from '../constants/ecc';
 
 interface Props {
   bearer: Bearer;
@@ -36,9 +39,9 @@ function buildDabUri(ecc: string, eid: string, sid: string, scids: number): stri
 }
 
 function parseFmUri(uri: string) {
-  const m = uri.match(/^fm:([a-z]{2})\.([0-9a-f]{4})\.([0-9]{5})$/i);
+  const m = uri.match(/^fm:([0-9a-f]{3})\.([0-9a-f]{4})\.([0-9]{5})$/i);
   if (!m) return null;
-  return { cc: m[1].toLowerCase(), pi: m[2].toLowerCase(), freq: m[3] };
+  return { gcc: m[1].toLowerCase(), pi: m[2].toLowerCase(), freq: m[3] };
 }
 
 function DabBearerForm({ bearer, onChange }: Props) {
@@ -47,9 +50,22 @@ function DabBearerForm({ bearer, onChange }: Props) {
   const [eid, setEid] = useState(parsed?.eid ?? '');
   const [sid, setSid] = useState(parsed?.sid ?? '');
   const [scids, setScids] = useState(parsed?.scids ?? 0);
+  const [eccHelperOpen, setEccHelperOpen] = useState(false);
+  const [helperCountry, setHelperCountry] = useState('');
 
   const pushUri = (newEcc: string, newEid: string, newSid: string, newScids: number) => {
     onChange({ uri: buildDabUri(newEcc, newEid, newSid, newScids) });
+  };
+
+  const countryNibble = eid.length >= 1 ? eid[0] : '?';
+  const helperEcc = ECC_BY_COUNTRY.find((e) => e.country === helperCountry)?.ecc ?? '';
+  const computedGcc = helperEcc ? helperEcc + countryNibble : '';
+
+  const applyHelperEcc = () => {
+    if (!helperEcc) return;
+    setEcc(helperEcc);
+    pushUri(helperEcc, eid, sid, scids);
+    setEccHelperOpen(false);
   };
 
   return (
@@ -57,20 +73,30 @@ function DabBearerForm({ bearer, onChange }: Props) {
       <Typography variant="caption" color="text.secondary">
         URI will be: <code>{bearer.uri || 'dab:<gcc>.<eid>.<sid>.<scids>'}</code>
       </Typography>
-      <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
-        <TextField
-          label="ECC (hex, 2 digits)"
-          placeholder="ce"
-          value={ecc}
-          size="small"
-          sx={{ width: 140 }}
-          inputProps={{ maxLength: 2 }}
-          onChange={(e) => {
-            const v = e.target.value.toLowerCase().replace(/[^0-9a-f]/g, '').slice(0, 2);
-            setEcc(v);
-            pushUri(v, eid, sid, scids);
-          }}
-        />
+      <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', alignItems: 'flex-start' }}>
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+          <TextField
+            label="ECC (hex, 2 digits)"
+            placeholder="ce"
+            value={ecc}
+            size="small"
+            sx={{ width: 140 }}
+            inputProps={{ maxLength: 2 }}
+            onChange={(e) => {
+              const v = e.target.value.toLowerCase().replace(/[^0-9a-f]/g, '').slice(0, 2);
+              setEcc(v);
+              pushUri(v, eid, sid, scids);
+            }}
+          />
+          <Button
+            size="small"
+            variant="text"
+            sx={{ fontSize: '0.7rem', p: 0, minWidth: 0, textTransform: 'none', alignSelf: 'flex-start' }}
+            onClick={() => setEccHelperOpen((o) => !o)}
+          >
+            {eccHelperOpen ? 'Hide helper' : 'Help me find ECC'}
+          </Button>
+        </Box>
         <TextField
           label="EId (hex, 4 digits)"
           placeholder="1066"
@@ -112,6 +138,59 @@ function DabBearerForm({ bearer, onChange }: Props) {
           }}
         />
       </Box>
+
+      <Collapse in={eccHelperOpen}>
+        <Box
+          sx={{
+            border: '1px solid',
+            borderColor: 'divider',
+            borderRadius: 1,
+            p: 1.5,
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 1,
+            bgcolor: 'action.hover',
+          }}
+        >
+          <Typography variant="caption" color="text.secondary">
+            GCC = ECC (2 hex) + first hex digit of EId.{' '}
+            Select your country to look up the ECC, then enter the EId to complete the GCC.
+          </Typography>
+          <Box sx={{ display: 'flex', gap: 1.5, alignItems: 'center', flexWrap: 'wrap' }}>
+            <FormControl size="small" sx={{ minWidth: 200 }}>
+              <InputLabel>Country</InputLabel>
+              <Select
+                value={helperCountry}
+                label="Country"
+                onChange={(e) => setHelperCountry(e.target.value)}
+              >
+                {ECC_BY_COUNTRY.map((entry) => (
+                  <MenuItem key={entry.country} value={entry.country}>
+                    {entry.country}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+            {helperEcc && (
+              <Typography variant="body2" sx={{ fontFamily: 'monospace' }}>
+                ECC = <strong>{helperEcc}</strong>
+                {eid.length >= 1 && (
+                  <> &rarr; GCC = <strong>{computedGcc}</strong> (EId[0]=<em>{countryNibble}</em>)</>
+                )}
+              </Typography>
+            )}
+            <Button
+              size="small"
+              variant="contained"
+              disabled={!helperEcc}
+              onClick={applyHelperEcc}
+            >
+              Use ECC {helperEcc || '…'}
+            </Button>
+          </Box>
+        </Box>
+      </Collapse>
+
       <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
         <FormControl size="small" sx={{ width: 200 }}>
           <InputLabel>MIME Type</InputLabel>
@@ -140,33 +219,56 @@ function DabBearerForm({ bearer, onChange }: Props) {
 
 function FmBearerForm({ bearer, onChange }: Props) {
   const parsed = parseFmUri(bearer.uri);
-  const [cc, setCc] = useState(parsed?.cc ?? '');
+  const [gcc, setGcc] = useState(parsed?.gcc ?? '');
   const [pi, setPi] = useState(parsed?.pi ?? '');
   const [freq, setFreq] = useState(parsed?.freq ?? '');
+  const [gccHelperOpen, setGccHelperOpen] = useState(false);
+  const [helperCountry, setHelperCountry] = useState('');
 
-  const pushUri = (newCc: string, newPi: string, newFreq: string) => {
-    onChange({ uri: `fm:${newCc}.${newPi}.${newFreq}` });
+  const pushUri = (newGcc: string, newPi: string, newFreq: string) => {
+    onChange({ uri: `fm:${newGcc}.${newPi}.${newFreq}` });
+  };
+
+  const helperEcc = ECC_BY_COUNTRY.find((e) => e.country === helperCountry)?.ecc ?? '';
+  const countryNibble = pi.length >= 1 ? pi[0] : '';
+  const computedGcc = helperEcc && countryNibble ? helperEcc + countryNibble : '';
+
+  const applyComputedGcc = () => {
+    if (!computedGcc) return;
+    setGcc(computedGcc);
+    pushUri(computedGcc, pi, freq);
+    setGccHelperOpen(false);
   };
 
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
       <Typography variant="caption" color="text.secondary">
-        URI will be: <code>{bearer.uri || 'fm:<cc>.<pi>.<freq>'}</code>
+        URI will be: <code>{bearer.uri || 'fm:<gcc>.<pi>.<freq>'}</code>
       </Typography>
-      <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
-        <TextField
-          label="Country code (ISO 3166-1)"
-          placeholder="gb"
-          value={cc}
-          size="small"
-          sx={{ width: 180 }}
-          inputProps={{ maxLength: 2 }}
-          onChange={(e) => {
-            const v = e.target.value.toLowerCase().replace(/[^a-z]/g, '').slice(0, 2);
-            setCc(v);
-            pushUri(v, pi, freq);
-          }}
-        />
+      <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', alignItems: 'flex-start' }}>
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+          <TextField
+            label="GCC (hex, 3 digits)"
+            placeholder="ce1"
+            value={gcc}
+            size="small"
+            sx={{ width: 160 }}
+            inputProps={{ maxLength: 3 }}
+            onChange={(e) => {
+              const v = e.target.value.toLowerCase().replace(/[^0-9a-f]/g, '').slice(0, 3);
+              setGcc(v);
+              pushUri(v, pi, freq);
+            }}
+          />
+          <Button
+            size="small"
+            variant="text"
+            sx={{ fontSize: '0.7rem', p: 0, minWidth: 0, textTransform: 'none', alignSelf: 'flex-start' }}
+            onClick={() => setGccHelperOpen((o) => !o)}
+          >
+            {gccHelperOpen ? 'Hide helper' : 'Help me find GCC'}
+          </Button>
+        </Box>
         <TextField
           label="RDS PI (hex, 4 digits)"
           placeholder="c204"
@@ -177,7 +279,7 @@ function FmBearerForm({ bearer, onChange }: Props) {
           onChange={(e) => {
             const v = e.target.value.toLowerCase().replace(/[^0-9a-f]/g, '').slice(0, 4);
             setPi(v);
-            pushUri(cc, v, freq);
+            pushUri(gcc, v, freq);
           }}
         />
         <TextField
@@ -191,7 +293,7 @@ function FmBearerForm({ bearer, onChange }: Props) {
           onChange={(e) => {
             const v = e.target.value.replace(/\D/g, '').slice(0, 5);
             setFreq(v);
-            pushUri(cc, pi, v);
+            pushUri(gcc, pi, v);
           }}
         />
         <TextField
@@ -204,6 +306,60 @@ function FmBearerForm({ bearer, onChange }: Props) {
           onChange={(e) => onChange({ cost: Math.min(255, Math.max(0, parseInt(e.target.value) || 0)) })}
         />
       </Box>
+
+      <Collapse in={gccHelperOpen}>
+        <Box
+          sx={{
+            border: '1px solid',
+            borderColor: 'divider',
+            borderRadius: 1,
+            p: 1.5,
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 1,
+            bgcolor: 'action.hover',
+          }}
+        >
+          <Typography variant="caption" color="text.secondary">
+            GCC = ECC (2 hex, from country) + country nibble (first hex digit of RDS PI).{' '}
+            Select your country and enter the PI code above to compute the GCC automatically.
+          </Typography>
+          <Box sx={{ display: 'flex', gap: 1.5, alignItems: 'center', flexWrap: 'wrap' }}>
+            <FormControl size="small" sx={{ minWidth: 200 }}>
+              <InputLabel>Country</InputLabel>
+              <Select
+                value={helperCountry}
+                label="Country"
+                onChange={(e) => setHelperCountry(e.target.value)}
+              >
+                {ECC_BY_COUNTRY.map((entry) => (
+                  <MenuItem key={entry.country} value={entry.country}>
+                    {entry.country}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+            {helperEcc && (
+              <Typography variant="body2" sx={{ fontFamily: 'monospace' }}>
+                ECC = <strong>{helperEcc}</strong>
+                {countryNibble ? (
+                  <> + PI[0]=<em>{countryNibble}</em> &rarr; GCC = <strong>{computedGcc}</strong></>
+                ) : (
+                  <> &mdash; enter PI code above</>
+                )}
+              </Typography>
+            )}
+            <Button
+              size="small"
+              variant="contained"
+              disabled={!computedGcc}
+              onClick={applyComputedGcc}
+            >
+              Use GCC {computedGcc || '…'}
+            </Button>
+          </Box>
+        </Box>
+      </Collapse>
     </Box>
   );
 }
