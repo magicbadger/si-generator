@@ -58,7 +58,7 @@ export function RadioDnsRetrieve({ onIngested }: Props) {
       updateService(id, svcData);
     }
     if (firstId) setActiveService(firstId);
-    setNav(firstId ? { view: 'service', serviceId: firstId, step: 0 } : { view: 'document' });
+    setNav({ view: 'document' });
   };
 
   const handleRetrieve = async () => {

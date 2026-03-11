@@ -40,9 +40,29 @@ export function generateXml(meta: DocumentMeta, services: Service[]): string {
 
   const siChildren: string[] = [];
 
-  if (meta.serviceProvider) {
+  if (meta.serviceProvider || meta.serviceProviderMediumName || meta.serviceProviderLongName ||
+      meta.serviceProviderShortDesc || meta.serviceProviderLongDesc || meta.serviceProviderLogos?.length) {
+    const spChildren: string[] = [];
+    if (meta.serviceProvider) spChildren.push(wrap('shortName', {}, esc(meta.serviceProvider)));
+    if (meta.serviceProviderMediumName) spChildren.push(wrap('mediumName', {}, esc(meta.serviceProviderMediumName)));
+    if (meta.serviceProviderLongName) spChildren.push(wrap('longName', {}, esc(meta.serviceProviderLongName)));
+    if (meta.serviceProviderShortDesc) {
+      spChildren.push(wrap('mediaDescription', {}, '\n      ' + wrap('shortDescription', {}, esc(meta.serviceProviderShortDesc)) + '\n    '));
+    }
+    if (meta.serviceProviderLongDesc) {
+      spChildren.push(wrap('mediaDescription', {}, '\n      ' + wrap('longDescription', {}, esc(meta.serviceProviderLongDesc)) + '\n    '));
+    }
+    for (const mm of meta.serviceProviderLogos ?? []) {
+      const a: AttrMap = { url: mm.url, type: mm.logoType };
+      if (mm.logoType === 'logo_unrestricted') {
+        if (mm.mimeValue) a.mimeValue = mm.mimeValue;
+        if (mm.width) a.width = mm.width;
+        if (mm.height) a.height = mm.height;
+      }
+      spChildren.push(wrap('mediaDescription', {}, '\n      ' + selfClose('multimedia', a) + '\n    '));
+    }
     siChildren.push(
-      '  ' + wrap('serviceProvider', {}, '\n    ' + wrap('shortName', {}, esc(meta.serviceProvider)) + '\n  ')
+      '  ' + wrap('serviceProvider', {}, '\n    ' + spChildren.join('\n    ') + '\n  ')
     );
   }
 

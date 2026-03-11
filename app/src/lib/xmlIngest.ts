@@ -67,15 +67,22 @@ export function ingestXml(xmlString: string): IngestResult {
     return { meta: defaultMeta(), services: [], error: 'Root element is not serviceInformation.' };
   }
 
+  const docLang = (si['@_xml:lang'] as string) || 'en';
+  const servicesNode = si['services'] as Record<string, unknown> | undefined;
+  const spInfo = extractServiceProviderInfo(servicesNode, si, docLang);
   const meta: DocumentMeta = {
-    serviceProvider: extractServiceProvider(si),
-    lang: (si['@_xml:lang'] as string) || 'en',
+    serviceProvider: spInfo.shortName,
+    serviceProviderMediumName: spInfo.mediumName,
+    serviceProviderLongName: spInfo.longName,
+    serviceProviderShortDesc: spInfo.shortDesc,
+    serviceProviderLongDesc: spInfo.longDesc,
+    serviceProviderLogos: spInfo.logos,
+    lang: docLang,
     creationTime: (si['@_creationTime'] as string) || new Date().toISOString().slice(0, 19) + '+00:00',
     version: parseInt((si['@_version'] as string) || '1', 10),
     originator: (si['@_originator'] as string) || '',
   };
 
-  const servicesNode = si['services'] as Record<string, unknown> | undefined;
   const serviceList = (servicesNode?.['service'] as Record<string, unknown>[]) || [];
 
   const services: Service[] = serviceList.map((s) => {
@@ -170,19 +177,75 @@ function asArray(val: unknown): Record<string, unknown>[] {
   return [val as Record<string, unknown>];
 }
 
-function extractServiceProvider(si: Record<string, unknown>): string {
-  if (typeof si['serviceProvider'] === 'object' && si['serviceProvider'] !== null) {
-    const sp = si['serviceProvider'] as Record<string, unknown>;
-    const sn = sp['shortName'];
-    if (typeof sn === 'string') return sn;
-    if (typeof sn === 'object' && sn !== null) return (sn as Record<string, string>)['#text'] || '';
-  }
+interface ServiceProviderInfo {
+  shortName: string;
+  mediumName: string;
+  longName: string;
+  shortDesc: string;
+  longDesc: string;
+  logos: Multimedia[];
+}
+
+function pickText(node: unknown): string {
+  if (typeof node === 'string') return node;
+  if (typeof node === 'object' && node !== null) return (node as Record<string, string>)['#text'] || '';
   return '';
+}
+
+function extractServiceProviderInfo(
+  servicesNode: Record<string, unknown> | undefined,
+  si: Record<string, unknown>,
+  lang: string
+): ServiceProviderInfo {
+  const empty: ServiceProviderInfo = { shortName: '', mediumName: '', longName: '', shortDesc: '', longDesc: '', logos: [] };
+
+  // Attribute form on serviceInformation — no rich data
+  if (typeof si['@_serviceProvider'] === 'string' && si['@_serviceProvider']) {
+    return { ...empty, shortName: si['@_serviceProvider'] };
+  }
+
+  // Child element form — <services><serviceProvider>…</serviceProvider></services>
+  const spRaw = servicesNode?.['serviceProvider'];
+  if (typeof spRaw !== 'object' || spRaw === null) return empty;
+  const sp = spRaw as Record<string, unknown>;
+
+  const firstName = (arr: Record<string, unknown>[], fallback = '') => {
+    const match = arr.find(n => (n['@_xml:lang'] as string) === lang) ?? arr[0];
+    return match ? pickText(match) : fallback;
+  };
+
+  const shortName = firstName(asArray(sp['shortName']));
+  const mediumName = firstName(asArray(sp['mediumName']));
+  const longName = firstName(asArray(sp['longName']));
+
+  const spMediaDescNodes = asArray(sp['mediaDescription']);
+
+  const shortDesc = firstName([
+    ...asArray(sp['shortDescription']),
+    ...spMediaDescNodes.flatMap(md => asArray((md as Record<string, unknown>)['shortDescription'])),
+  ]);
+
+  const longDesc = firstName([
+    ...asArray(sp['longDescription']),
+    ...spMediaDescNodes.flatMap(md => asArray((md as Record<string, unknown>)['longDescription'])),
+  ]);
+
+  const logos: Multimedia[] = spMediaDescNodes.flatMap(md => {
+    const mmNode = (md as Record<string, unknown>)['multimedia'];
+    return asArray(mmNode).map(mm => parseMultimedia(mm as Record<string, string>));
+  });
+
+  return { shortName, mediumName, longName, shortDesc, longDesc, logos };
 }
 
 function defaultMeta(): DocumentMeta {
   return {
     serviceProvider: '',
+    serviceProviderMediumName: '',
+    serviceProviderLongName: '',
+    serviceProviderShortDesc: '',
+    serviceProviderLongDesc: '',
+    serviceProviderLogos: [],
     lang: 'en',
     creationTime: new Date().toISOString().slice(0, 19) + '+00:00',
     version: 1,

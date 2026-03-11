@@ -1,5 +1,10 @@
 export interface DocumentMeta {
   serviceProvider: string;
+  serviceProviderMediumName: string;
+  serviceProviderLongName: string;
+  serviceProviderShortDesc: string;
+  serviceProviderLongDesc: string;
+  serviceProviderLogos: Multimedia[];
   lang: string;
   creationTime: string;
   version: number;

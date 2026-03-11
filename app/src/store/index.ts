@@ -6,6 +6,11 @@ import { validateStore } from '../lib/validate';
 
 const defaultMeta: DocumentMeta = {
   serviceProvider: '',
+  serviceProviderMediumName: '',
+  serviceProviderLongName: '',
+  serviceProviderShortDesc: '',
+  serviceProviderLongDesc: '',
+  serviceProviderLogos: [],
   lang: 'en',
   creationTime: new Date().toISOString().slice(0, 19) + '+00:00',
   version: 1,
@@ -106,6 +111,12 @@ export const useStore = create<SIStore>()(
     }),
     {
       name: 'si-generator-store',
+      merge: (persisted, current) => ({
+        ...current,
+        ...(persisted as Partial<SIStore>),
+        // Deep-merge meta so new fields get their defaults when loading old persisted state
+        meta: { ...defaultMeta, ...((persisted as Partial<SIStore>).meta ?? {}) },
+      }),
     }
   )
 );
