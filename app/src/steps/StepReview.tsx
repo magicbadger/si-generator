@@ -110,6 +110,62 @@ export function StepReview() {
         </Alert>
       )}
 
+      <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
+        <Button
+          variant="contained"
+          startIcon={<DownloadIcon />}
+          onClick={handleDownload}
+          disabled={services.length === 0}
+        >
+          Download SI.xml
+        </Button>
+        <Button
+          variant="outlined"
+          startIcon={<CodeIcon />}
+          onClick={() => setPreviewOpen(true)}
+          disabled={services.length === 0}
+        >
+          Preview XML
+        </Button>
+        <Button
+          variant="outlined"
+          color="info"
+          startIcon={<FactCheckIcon />}
+          onClick={() => setValidateOpen(true)}
+          disabled={services.length === 0}
+        >
+          Validate
+        </Button>
+        <Button
+          variant="outlined"
+          color="secondary"
+          startIcon={<FolderZipIcon />}
+          onClick={() => setFolderOpen(true)}
+          disabled={services.length === 0}
+        >
+          Export Folder
+        </Button>
+        <Button
+          variant="outlined"
+          color="secondary"
+          startIcon={<DownloadIcon />}
+          onClick={() => setDockerOpen(true)}
+          disabled={services.length === 0}
+        >
+          Export Docker Package
+        </Button>
+      </Box>
+
+      {hasDataUrlLogos && (
+        <Alert severity="info">
+          This service has logos stored as embedded data. Use <strong>Export Docker Package</strong> to
+          bundle them into a self-contained server — the exported SI.xml will have proper URLs pointing
+          to the container.
+        </Alert>
+      )}
+
+      <Divider />
+
       <Card variant="outlined">
         <CardContent>
           <Typography variant="subtitle1" gutterBottom>Document</Typography>
@@ -177,62 +233,6 @@ export function StepReview() {
           </Card>
         );
       })}
-
-      <Divider />
-
-      <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
-        <Button
-          variant="contained"
-          startIcon={<DownloadIcon />}
-          onClick={handleDownload}
-          disabled={services.length === 0}
-        >
-          Download SI.xml
-        </Button>
-        <Button
-          variant="outlined"
-          startIcon={<CodeIcon />}
-          onClick={() => setPreviewOpen(true)}
-          disabled={services.length === 0}
-        >
-          Preview XML
-        </Button>
-        <Button
-          variant="outlined"
-          color="info"
-          startIcon={<FactCheckIcon />}
-          onClick={() => setValidateOpen(true)}
-          disabled={services.length === 0}
-        >
-          Validate
-        </Button>
-        <Button
-          variant="outlined"
-          color="secondary"
-          startIcon={<FolderZipIcon />}
-          onClick={() => setFolderOpen(true)}
-          disabled={services.length === 0}
-        >
-          Export Folder
-        </Button>
-        <Button
-          variant="outlined"
-          color="secondary"
-          startIcon={<DownloadIcon />}
-          onClick={() => setDockerOpen(true)}
-          disabled={services.length === 0}
-        >
-          Export Docker Package
-        </Button>
-      </Box>
-
-      {hasDataUrlLogos && (
-        <Alert severity="info">
-          This service has logos stored as embedded data. Use <strong>Export Docker Package</strong> to
-          bundle them into a self-contained server — the exported SI.xml will have proper URLs pointing
-          to the container.
-        </Alert>
-      )}
 
       <Dialog open={dockerOpen} onClose={() => setDockerOpen(false)} maxWidth="sm" fullWidth>
         <DialogTitle>Export Docker Package</DialogTitle>

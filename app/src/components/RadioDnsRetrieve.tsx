@@ -5,6 +5,10 @@ import {
   Button,
   CircularProgress,
   Collapse,
+  FormControl,
+  InputLabel,
+  MenuItem,
+  Select,
   TextField,
   ToggleButton,
   ToggleButtonGroup,
@@ -14,6 +18,7 @@ import TravelExploreIcon from '@mui/icons-material/TravelExplore';
 import { buildFmLookup, buildDabLookup, resolveAuthFqdn, discoverSiUrl, fetchSiXml } from '../lib/radiodnsLookup';
 import { ingestXml } from '../lib/xmlIngest';
 import { useStore } from '../store';
+import { ECC_BY_COUNTRY } from '../constants/ecc';
 
 type Mode = 'fm' | 'dab' | 'radiodns';
 
@@ -38,6 +43,22 @@ export function RadioDnsRetrieve({ onIngested }: Props) {
 
   // RadioDNS direct field
   const [directFqdn, setDirectFqdn] = useState('');
+
+  // GCC helpers
+  const [dabHelperOpen, setDabHelperOpen] = useState(false);
+  const [dabHelperCountry, setDabHelperCountry] = useState('');
+  const [fmHelperOpen, setFmHelperOpen] = useState(false);
+  const [fmHelperCountry, setFmHelperCountry] = useState('');
+
+  const dabHelperEcc = ECC_BY_COUNTRY.find((e) => e.country === dabHelperCountry)?.ecc ?? '';
+  const dabCountryNibble = dabEid.length >= 1 ? dabEid[0] : '?';
+  const dabComputedGcc = dabHelperEcc ? dabHelperEcc + dabCountryNibble : '';
+  const dabGccMismatch = dabGcc.length === 3 && dabEid.length >= 1 && dabGcc[2] !== dabEid[0];
+
+  const fmHelperEcc = ECC_BY_COUNTRY.find((e) => e.country === fmHelperCountry)?.ecc ?? '';
+  const fmCountryNibble = fmPi.length >= 1 ? fmPi[0] : '';
+  const fmComputedGcc = fmHelperEcc && fmCountryNibble ? fmHelperEcc + fmCountryNibble : '';
+  const fmGccMismatch = fmGcc.length === 3 && fmPi.length >= 1 && fmGcc[2] !== fmPi[0];
 
   const [status, setStatus] = useState('');
   const [error, setError] = useState('');
@@ -150,40 +171,153 @@ export function RadioDnsRetrieve({ onIngested }: Props) {
           </ToggleButtonGroup>
 
           <Collapse in={mode === 'fm'} unmountOnExit>
-            <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-              <TextField label="GCC" placeholder="ce1" value={fmGcc} size="small" sx={{ width: 80 }}
-                inputProps={{ maxLength: 3 }}
-                onChange={(e) => setFmGcc(e.target.value.replace(/[^0-9a-fA-F]/g, '').toLowerCase())}
-                helperText="3 hex" />
-              <TextField label="PI" placeholder="c586" value={fmPi} size="small" sx={{ width: 90 }}
-                inputProps={{ maxLength: 4 }}
-                onChange={(e) => setFmPi(e.target.value.replace(/[^0-9a-fA-F]/g, '').toLowerCase())}
-                helperText="4 hex" />
-              <TextField label="Frequency" placeholder="09580" value={fmFreq} size="small" sx={{ width: 110 }}
-                inputProps={{ maxLength: 5 }}
-                onChange={(e) => setFmFreq(e.target.value.replace(/[^0-9]/g, ''))}
-                helperText="5 digits, 10 kHz" />
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+              <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', alignItems: 'flex-start' }}>
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+                  <TextField label="GCC" placeholder="ce1" value={fmGcc} size="small" sx={{ width: 80 }}
+                    inputProps={{ maxLength: 3 }}
+                    onChange={(e) => setFmGcc(e.target.value.replace(/[^0-9a-fA-F]/g, '').toLowerCase())}
+                    helperText="3 hex" />
+                  <Button size="small" variant="text"
+                    sx={{ fontSize: '0.7rem', p: 0, minWidth: 0, textTransform: 'none', alignSelf: 'flex-start' }}
+                    onClick={() => setFmHelperOpen((o) => !o)}>
+                    {fmHelperOpen ? 'Hide helper' : 'Help me find GCC'}
+                  </Button>
+                </Box>
+                <TextField label="PI" placeholder="c586" value={fmPi} size="small" sx={{ width: 90 }}
+                  inputProps={{ maxLength: 4 }}
+                  onChange={(e) => {
+                    const v = e.target.value.replace(/[^0-9a-fA-F]/g, '').toLowerCase();
+                    setFmPi(v);
+                    if (v.length >= 1 && fmGcc.length === 3 && fmGcc[2] === '?') {
+                      setFmGcc(fmGcc.slice(0, 2) + v[0]);
+                    }
+                  }}
+                  helperText="4 hex" />
+                <TextField label="Frequency" placeholder="09580" value={fmFreq} size="small" sx={{ width: 110 }}
+                  inputProps={{ maxLength: 5 }}
+                  onChange={(e) => setFmFreq(e.target.value.replace(/[^0-9]/g, ''))}
+                  helperText="5 digits, 10 kHz" />
+              </Box>
+              {fmGccMismatch && (
+                <Typography variant="caption" color="warning.main">
+                  GCC third digit (<strong>{fmGcc[2]}</strong>) does not match the first digit of PI (<strong>{fmPi[0]}</strong>). GCC should be ECC + PI[0].
+                </Typography>
+              )}
+              <Collapse in={fmHelperOpen}>
+                <Box sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 1, p: 1.5,
+                  display: 'flex', flexDirection: 'column', gap: 1, bgcolor: 'action.hover' }}>
+                  <Typography variant="caption" color="text.secondary">
+                    GCC = ECC (2 hex, from country) + first hex digit of RDS PI.
+                  </Typography>
+                  <Box sx={{ display: 'flex', gap: 1.5, alignItems: 'center', flexWrap: 'wrap' }}>
+                    <FormControl size="small" sx={{ minWidth: 200 }}>
+                      <InputLabel>Country</InputLabel>
+                      <Select value={fmHelperCountry} label="Country"
+                        onChange={(e) => setFmHelperCountry(e.target.value)}>
+                        {ECC_BY_COUNTRY.map((entry) => (
+                          <MenuItem key={entry.country} value={entry.country}>{entry.country}</MenuItem>
+                        ))}
+                      </Select>
+                    </FormControl>
+                    {fmHelperEcc && (
+                      <Typography variant="body2" sx={{ fontFamily: 'monospace' }}>
+                        ECC = <strong>{fmHelperEcc}</strong>
+                        {fmCountryNibble ? (
+                          <> + PI[0]=<em>{fmCountryNibble}</em> &rarr; GCC = <strong>{fmComputedGcc}</strong></>
+                        ) : (
+                          <> &mdash; enter PI above</>
+                        )}
+                      </Typography>
+                    )}
+                    <Button size="small" variant="contained" disabled={!fmComputedGcc}
+                      onClick={() => {
+                        if (!fmComputedGcc) return;
+                        setFmGcc(fmComputedGcc);
+                        setFmHelperOpen(false);
+                      }}>
+                      Use GCC {fmComputedGcc || '…'}
+                    </Button>
+                  </Box>
+                </Box>
+              </Collapse>
             </Box>
           </Collapse>
 
           <Collapse in={mode === 'dab'} unmountOnExit>
-            <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-              <TextField label="GCC" placeholder="ce1" value={dabGcc} size="small" sx={{ width: 80 }}
-                inputProps={{ maxLength: 3 }}
-                onChange={(e) => setDabGcc(e.target.value.replace(/[^0-9a-fA-F]/g, '').toLowerCase())}
-                helperText="3 hex" />
-              <TextField label="EId" placeholder="1066" value={dabEid} size="small" sx={{ width: 90 }}
-                inputProps={{ maxLength: 4 }}
-                onChange={(e) => setDabEid(e.target.value.replace(/[^0-9a-fA-F]/g, '').toLowerCase())}
-                helperText="4 hex" />
-              <TextField label="SId" placeholder="c1f8" value={dabSid} size="small" sx={{ width: 100 }}
-                inputProps={{ maxLength: 8 }}
-                onChange={(e) => setDabSid(e.target.value.replace(/[^0-9a-fA-F]/g, '').toLowerCase())}
-                helperText="4–8 hex" />
-              <TextField label="SCIdS" placeholder="0" value={dabScids} size="small" sx={{ width: 75 }}
-                inputProps={{ maxLength: 1 }}
-                onChange={(e) => setDabScids(e.target.value.replace(/[^0-9a-fA-F]/g, '').toLowerCase())}
-                helperText="1 hex" />
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+              <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', alignItems: 'flex-start' }}>
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+                  <TextField label="GCC" placeholder="ce1" value={dabGcc} size="small" sx={{ width: 80 }}
+                    inputProps={{ maxLength: 3 }}
+                    onChange={(e) => setDabGcc(e.target.value.replace(/[^0-9a-fA-F]/g, '').toLowerCase())}
+                    helperText="3 hex" />
+                  <Button size="small" variant="text"
+                    sx={{ fontSize: '0.7rem', p: 0, minWidth: 0, textTransform: 'none', alignSelf: 'flex-start' }}
+                    onClick={() => setDabHelperOpen((o) => !o)}>
+                    {dabHelperOpen ? 'Hide helper' : 'Help me find GCC'}
+                  </Button>
+                </Box>
+                <TextField label="EId" placeholder="1066" value={dabEid} size="small" sx={{ width: 90 }}
+                  inputProps={{ maxLength: 4 }}
+                  onChange={(e) => {
+                    const v = e.target.value.replace(/[^0-9a-fA-F]/g, '').toLowerCase();
+                    setDabEid(v);
+                    if (v.length >= 1 && dabGcc.length === 3 && dabGcc[2] === '?') {
+                      setDabGcc(dabGcc.slice(0, 2) + v[0]);
+                    }
+                  }}
+                  helperText="4 hex" />
+                <TextField label="SId" placeholder="c1f8" value={dabSid} size="small" sx={{ width: 100 }}
+                  inputProps={{ maxLength: 8 }}
+                  onChange={(e) => setDabSid(e.target.value.replace(/[^0-9a-fA-F]/g, '').toLowerCase())}
+                  helperText="4–8 hex" />
+                <TextField label="SCIdS" placeholder="0" value={dabScids} size="small" sx={{ width: 75 }}
+                  inputProps={{ maxLength: 1 }}
+                  onChange={(e) => setDabScids(e.target.value.replace(/[^0-9a-fA-F]/g, '').toLowerCase())}
+                  helperText="1 hex" />
+              </Box>
+              {dabGccMismatch && (
+                <Typography variant="caption" color="warning.main">
+                  GCC third digit (<strong>{dabGcc[2]}</strong>) does not match the first digit of EId (<strong>{dabEid[0]}</strong>). GCC should be ECC + EId[0].
+                </Typography>
+              )}
+              <Collapse in={dabHelperOpen}>
+                <Box sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 1, p: 1.5,
+                  display: 'flex', flexDirection: 'column', gap: 1, bgcolor: 'action.hover' }}>
+                  <Typography variant="caption" color="text.secondary">
+                    GCC = ECC (2 hex, from country) + first hex digit of EId.
+                  </Typography>
+                  <Box sx={{ display: 'flex', gap: 1.5, alignItems: 'center', flexWrap: 'wrap' }}>
+                    <FormControl size="small" sx={{ minWidth: 200 }}>
+                      <InputLabel>Country</InputLabel>
+                      <Select value={dabHelperCountry} label="Country"
+                        onChange={(e) => setDabHelperCountry(e.target.value)}>
+                        {ECC_BY_COUNTRY.map((entry) => (
+                          <MenuItem key={entry.country} value={entry.country}>{entry.country}</MenuItem>
+                        ))}
+                      </Select>
+                    </FormControl>
+                    {dabHelperEcc && (
+                      <Typography variant="body2" sx={{ fontFamily: 'monospace' }}>
+                        ECC = <strong>{dabHelperEcc}</strong>
+                        {dabEid.length >= 1 && (
+                          <> &rarr; GCC = <strong>{dabComputedGcc}</strong> (EId[0]=<em>{dabCountryNibble}</em>)</>
+                        )}
+                      </Typography>
+                    )}
+                    <Button size="small" variant="contained" disabled={!dabHelperEcc}
+                      onClick={() => {
+                        if (!dabHelperEcc) return;
+                        const gcc = dabHelperEcc + dabCountryNibble;
+                        setDabGcc(gcc);
+                        setDabHelperOpen(false);
+                      }}>
+                      Use ECC {dabHelperEcc || '…'}
+                    </Button>
+                  </Box>
+                </Box>
+              </Collapse>
             </Box>
           </Collapse>
 
