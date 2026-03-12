@@ -39,10 +39,19 @@ export function buildDabLookup(gcc: string, eid: string, sid: string, scids: str
  * Perform CNAME lookup to get Authoritative FQDN.
  * Throws if the service is not registered in RadioDNS.
  */
+const DNS_STATUS: Record<number, string> = {
+  1: 'Format error — the DNS server could not interpret the query.',
+  2: 'Server failure — the DNS server encountered an internal error.',
+  3: 'Not found (NXDOMAIN) — this broadcaster has not registered with RadioDNS. They may not support hybrid radio, or their broadcast parameters may be incorrect.',
+  4: 'Not implemented — the DNS server does not support this query type.',
+  5: 'Refused — the DNS server refused the query.',
+};
+
 export async function resolveAuthFqdn(lookupName: string): Promise<string> {
   const result = await dohQuery(lookupName, 'CNAME');
   if (result.Status !== 0) {
-    throw new Error(`DNS error (status ${result.Status}) resolving ${lookupName}`);
+    const detail = DNS_STATUS[result.Status] ?? `Unexpected DNS status ${result.Status}.`;
+    throw new Error(`DNS lookup failed for:\n${lookupName}\n\n${detail}`);
   }
   const cname = result.Answer?.find((a) => a.type === 5);
   if (!cname) {

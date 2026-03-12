@@ -22,9 +22,12 @@ import CodeIcon from '@mui/icons-material/Code';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import FolderZipIcon from '@mui/icons-material/FolderZip';
 import FactCheckIcon from '@mui/icons-material/FactCheck';
+import DnsIcon from '@mui/icons-material/Dns';
 import { useStore } from '../store';
 import { generateXml } from '../lib/xmlGenerate';
 import { generateDockerPackage, generateFolderExport } from '../lib/dockerExport';
+import { generateZonefile } from '../lib/zonefileGenerate';
+import { downloadBlob } from '../lib/download';
 import { XmlPreviewDialog } from '../components/XmlPreviewDialog';
 import { ValidationReportDialog } from '../components/ValidationReportDialog';
 
@@ -46,17 +49,18 @@ export function StepReview() {
   const handleFolderExport = async () => {
     setFolderBusy(true);
     try {
-      const blob = await generateFolderExport(meta, services, folderUrl);
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = 'si-export.zip';
-      a.click();
-      URL.revokeObjectURL(url);
+      downloadBlob(await generateFolderExport(meta, services, folderUrl), 'si-export.zip');
       setFolderOpen(false);
     } finally {
       setFolderBusy(false);
     }
+  };
+
+  const handleZonefileDownload = () => {
+    downloadBlob(
+      new Blob([generateZonefile(meta, services)], { type: 'text/plain;charset=utf-8' }),
+      'radiodns.zone'
+    );
   };
 
   const hasDataUrlLogos = services.some((svc) =>
@@ -64,25 +68,13 @@ export function StepReview() {
   );
 
   const handleDownload = () => {
-    const blob = new Blob([xml], { type: 'application/xml;charset=utf-8' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'SI.xml';
-    a.click();
-    URL.revokeObjectURL(url);
+    downloadBlob(new Blob([xml], { type: 'application/xml;charset=utf-8' }), 'SI.xml');
   };
 
   const handleDockerExport = async () => {
     setDockerBusy(true);
     try {
-      const blob = await generateDockerPackage(meta, services, baseUrl);
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = 'si-docker-package.zip';
-      a.click();
-      URL.revokeObjectURL(url);
+      downloadBlob(await generateDockerPackage(meta, services, baseUrl), 'si-docker-package.zip');
       setDockerOpen(false);
     } finally {
       setDockerBusy(false);
@@ -153,6 +145,15 @@ export function StepReview() {
           disabled={services.length === 0}
         >
           Export Docker Package
+        </Button>
+        <Button
+          variant="outlined"
+          color="secondary"
+          startIcon={<DnsIcon />}
+          onClick={handleZonefileDownload}
+          disabled={services.length === 0}
+        >
+          Export Zone File
         </Button>
       </Box>
 
