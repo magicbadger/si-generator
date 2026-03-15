@@ -111,12 +111,23 @@ export const useStore = create<SIStore>()(
     }),
     {
       name: 'si-generator-store',
-      merge: (persisted, current) => ({
-        ...current,
-        ...(persisted as Partial<SIStore>),
-        // Deep-merge meta so new fields get their defaults when loading old persisted state
-        meta: { ...defaultMeta, ...((persisted as Partial<SIStore>).meta ?? {}) },
-      }),
+      // Exclude sourceXml (potentially large raw XML, only used for preview — not needed across sessions)
+      partialize: (state): Partial<SIStore> => {
+        const { sourceXml: _, ...rest } = state;
+        return rest;
+      },
+      merge: (persisted, current) => {
+        // Reject obviously invalid persisted shapes
+        if (typeof persisted !== 'object' || persisted === null || Array.isArray(persisted)) {
+          return current;
+        }
+        return {
+          ...current,
+          ...(persisted as Partial<SIStore>),
+          // Deep-merge meta so new fields get their defaults when loading old persisted state
+          meta: { ...defaultMeta, ...((persisted as Partial<SIStore>).meta ?? {}) },
+        };
+      },
     }
   )
 );

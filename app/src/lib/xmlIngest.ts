@@ -85,6 +85,10 @@ export function ingestXml(xmlString: string): IngestResult {
 
   const serviceList = (servicesNode?.['service'] as Record<string, unknown>[]) || [];
 
+  if (serviceList.length > 200) {
+    return { meta: defaultMeta(), services: [], error: `File contains too many services (${serviceList.length}). Maximum supported is 200.` };
+  }
+
   const services: Service[] = serviceList.map((s) => {
     const svcRaw = s as Record<string, unknown>;
 

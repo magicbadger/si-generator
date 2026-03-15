@@ -16,6 +16,16 @@ const LOGO_SIZES: Record<string, { w: number; h: number }> = {
 
 const MAX_DISPLAY = 300;
 
+function isSafeLogoUrl(url: string): boolean {
+  if (url.startsWith('data:image/')) return true;
+  try {
+    const { protocol } = new URL(url);
+    return protocol === 'https:' || protocol === 'http:';
+  } catch {
+    return false;
+  }
+}
+
 export function LogoPreview({ logo, hasError }: Props) {
   const [imgError, setImgError] = useState(false);
 
@@ -53,7 +63,7 @@ export function LogoPreview({ logo, hasError }: Props) {
           overflow: 'hidden',
         }}
       >
-        {imgError ? (
+        {imgError || !isSafeLogoUrl(logo.url) ? (
           <BrokenImageIcon color="disabled" />
         ) : (
           <img

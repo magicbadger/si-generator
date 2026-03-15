@@ -7,13 +7,21 @@ function slugify(s: string): string {
 }
 
 function dataUrlToBytes(dataUrl: string): { bytes: Uint8Array; ext: string } {
+  if (!dataUrl.startsWith('data:image/')) {
+    throw new Error('Invalid logo data: must be an image data URI');
+  }
   const [header, b64] = dataUrl.split(',');
   const mime = header.match(/:(.*?);/)?.[1] ?? 'image/png';
-  const ext = mime.split('/')[1]?.replace('jpeg', 'jpg') ?? 'png';
-  const binary = atob(b64);
-  const bytes = new Uint8Array(binary.length);
-  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
-  return { bytes, ext };
+  const rawExt = mime.split('/')[1]?.replace('jpeg', 'jpg') ?? 'png';
+  const ext = /^[a-z0-9]+$/.test(rawExt) ? rawExt : 'bin';
+  try {
+    const binary = atob(b64);
+    const bytes = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+    return { bytes, ext };
+  } catch {
+    throw new Error('Invalid base64 data in logo image');
+  }
 }
 
 export async function generateDockerPackage(

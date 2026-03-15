@@ -121,6 +121,25 @@ export function validateStore(meta: DocumentMeta, services: Service[]): Validati
           message: 'Bearer is missing a URI.',
           suggestion: 'Fill in all required fields for this bearer.',
         });
+      } else if (bearer.type === 'ip_stream' || bearer.type === 'ip_playlist') {
+        try {
+          const { protocol } = new URL(bearer.uri);
+          if (protocol !== 'https:' && protocol !== 'http:') {
+            errors.push({
+              serviceId: sid,
+              field: `bearer.${bearer.id}.uri`,
+              message: 'IP bearer URI must use http or https.',
+              suggestion: 'Enter a valid https:// or http:// URL.',
+            });
+          }
+        } catch {
+          errors.push({
+            serviceId: sid,
+            field: `bearer.${bearer.id}.uri`,
+            message: 'IP bearer URI is not a valid URL.',
+            suggestion: 'Enter a valid https:// or http:// URL.',
+          });
+        }
       }
     }
 

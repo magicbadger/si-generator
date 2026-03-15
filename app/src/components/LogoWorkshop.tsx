@@ -137,11 +137,14 @@ function downloadDataUrl(dataUrl: string, filename: string) {
 }
 
 function openInNewTab(dataUrl: string) {
+  if (!dataUrl.startsWith('data:image/')) return;
   const win = window.open('', '_blank');
-  if (win) {
-    win.document.write(`<!doctype html><html><body style="margin:0;background:#666;display:flex;align-items:center;justify-content:center;min-height:100vh"><img src="${dataUrl}" style="max-width:100%;image-rendering:pixelated"></body></html>`);
-    win.document.close();
-  }
+  if (!win) return;
+  win.document.body.style.cssText = 'margin:0;background:#666;display:flex;align-items:center;justify-content:center;min-height:100vh';
+  const img = win.document.createElement('img');
+  img.src = dataUrl;
+  img.style.cssText = 'max-width:100%;image-rendering:pixelated';
+  win.document.body.appendChild(img);
 }
 
 // ---------------------------------------------------------------------------
@@ -492,13 +495,17 @@ export function LogoWorkshop({ open, onClose, onAdd }: Props) {
                   SVG output (scalable vector):
                 </Typography>
                 <Box
-                  dangerouslySetInnerHTML={{ __html: svgString }}
                   sx={{
                     border: '1px dashed', borderColor: 'grey.300', borderRadius: 1,
                     bgcolor: 'grey.50', p: 1, display: 'inline-block',
-                    '& svg': { display: 'block', maxHeight: 160, width: 'auto' },
                   }}
-                />
+                >
+                  <img
+                    src={`data:image/svg+xml;charset=utf-8,${encodeURIComponent(svgString)}`}
+                    alt="SVG preview"
+                    style={{ display: 'block', maxHeight: 160, width: 'auto' }}
+                  />
+                </Box>
               </Box>
             )}
 

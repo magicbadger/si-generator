@@ -91,11 +91,38 @@ export async function discoverSiUrl(authFqdn: string): Promise<string> {
 }
 
 const CORS_PROXY = 'https://corsproxy.io/?url=';
+const MAX_SI_BYTES = 1 * 1024 * 1024; // 1 MB
+
+/** Returns true for http(s) URLs that are not private/loopback addresses. */
+function isSafeUrl(url: string): boolean {
+  try {
+    const { protocol, hostname } = new URL(url);
+    if (protocol !== 'https:' && protocol !== 'http:') return false;
+    const h = hostname.toLowerCase();
+    if (h === 'localhost' || h === '0.0.0.0') return false;
+    if (/^127\./.test(h) || h === '::1') return false;
+    if (/^10\./.test(h)) return false;
+    if (/^192\.168\./.test(h)) return false;
+    if (/^172\.(1[6-9]|2[0-9]|3[01])\./.test(h)) return false;
+    if (/^169\.254\./.test(h)) return false;
+    if (h.endsWith('.local')) return false;
+    return true;
+  } catch {
+    return false;
+  }
+}
 
 async function doFetch(url: string): Promise<string> {
   const resp = await fetch(url);
   if (!resp.ok) throw new Error(`HTTP ${resp.status} from ${url}`);
+  const cl = resp.headers.get('content-length');
+  if (cl && parseInt(cl, 10) > MAX_SI_BYTES) {
+    throw new Error(`Response too large from ${url}`);
+  }
   const text = await resp.text();
+  if (text.length > MAX_SI_BYTES) {
+    throw new Error(`Response too large from ${url}`);
+  }
   if (!text.includes('serviceInformation')) {
     throw new Error(`Response from ${url} does not appear to be a valid SI.xml`);
   }
@@ -108,6 +135,9 @@ async function doFetch(url: string): Promise<string> {
  * Pass an optional onStatus callback to report progress to the UI.
  */
 export async function fetchSiXml(url: string, onStatus?: (s: string) => void): Promise<string> {
+  if (!isSafeUrl(url)) {
+    throw new Error(`Refused to fetch from unsafe or private URL: ${url}`);
+  }
   try {
     return await doFetch(url);
   } catch (e) {

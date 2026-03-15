@@ -23,6 +23,10 @@ export function IngestDropzone({ onIngested }: Props) {
         setError('Please upload an XML file.');
         return;
       }
+      if (file.size > 1 * 1024 * 1024) {
+        setError(`File is too large (${(file.size / 1024).toFixed(0)} KB). Maximum size is 1 MB.`);
+        return;
+      }
       const reader = new FileReader();
       reader.onload = (e) => {
         const text = e.target?.result as string;
