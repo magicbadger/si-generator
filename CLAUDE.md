@@ -66,12 +66,12 @@ For each bearer type selected, ask the relevant follow-up questions:
 ### DAB / DAB+
 | # | Question | Field | Notes |
 |---|----------|-------|-------|
-| 3.1a | What is the DAB ECC (Extended Country Code) in hex? (e.g. `ce`) | bearer URI `dab:` component | 2 hex digits |
+| 3.1a | What is the DAB ECC (Extended Country Code) in hex? (e.g. `e1` for UK) | bearer URI `dab:` component | 2 hex digits |
 | 3.1b | What is the DAB EId (Ensemble Identifier) in hex? (e.g. `1066`) | bearer URI component | 4 hex digits |
 | 3.1c | What is the DAB SId (Service Identifier) in hex? (e.g. `c1f8`) | bearer URI component | 4 or 8 hex digits |
 | 3.1d | What is the SCIdS (Service Component ID within Service)? (usually `0`) | bearer URI component | integer 0–15 |
 | 3.1e | Bearer cost (0–255, lower = preferred; default 0) | `bearer/@cost` | |
-Construct URI: `dab:<gcc>.<eid>.<sid>.<scids>` where gcc = ECC+EId country nibble.
+Construct URI: `dab:<gcc>.<eid>.<sid>.<scids>` where gcc = EId country nibble (EId[0]) + ECC.
 Set `mimeValue`: DAB = `audio/mpeg`, DAB+ = `audio/aacp`.
 
 ### FM / RDS

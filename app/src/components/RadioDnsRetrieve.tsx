@@ -52,13 +52,13 @@ export function RadioDnsRetrieve({ onIngested }: Props) {
 
   const dabHelperEcc = ECC_BY_COUNTRY.find((e) => e.country === dabHelperCountry)?.ecc ?? '';
   const dabCountryNibble = dabEid.length >= 1 ? dabEid[0] : '?';
-  const dabComputedGcc = dabHelperEcc ? dabHelperEcc + dabCountryNibble : '';
-  const dabGccMismatch = dabGcc.length === 3 && dabEid.length >= 1 && dabGcc[2] !== dabEid[0];
+  const dabComputedGcc = dabHelperEcc ? dabCountryNibble + dabHelperEcc : '';
+  const dabGccMismatch = dabGcc.length === 3 && dabEid.length >= 1 && dabGcc[0] !== dabEid[0];
 
   const fmHelperEcc = ECC_BY_COUNTRY.find((e) => e.country === fmHelperCountry)?.ecc ?? '';
   const fmCountryNibble = fmPi.length >= 1 ? fmPi[0] : '';
-  const fmComputedGcc = fmHelperEcc && fmCountryNibble ? fmHelperEcc + fmCountryNibble : '';
-  const fmGccMismatch = fmGcc.length === 3 && fmPi.length >= 1 && fmGcc[2] !== fmPi[0];
+  const fmComputedGcc = fmHelperEcc && fmCountryNibble ? fmCountryNibble + fmHelperEcc : '';
+  const fmGccMismatch = fmGcc.length === 3 && fmPi.length >= 1 && fmGcc[0] !== fmPi[0];
 
   const [status, setStatus] = useState('');
   const [error, setError] = useState('');
@@ -201,14 +201,14 @@ export function RadioDnsRetrieve({ onIngested }: Props) {
               </Box>
               {fmGccMismatch && (
                 <Typography variant="caption" color="warning.main">
-                  GCC third digit (<strong>{fmGcc[2]}</strong>) does not match the first digit of PI (<strong>{fmPi[0]}</strong>). GCC should be ECC + PI[0].
+                  GCC first digit (<strong>{fmGcc[0]}</strong>) does not match the first digit of PI (<strong>{fmPi[0]}</strong>). GCC should be PI[0] + ECC.
                 </Typography>
               )}
               <Collapse in={fmHelperOpen}>
                 <Box sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 1, p: 1.5,
                   display: 'flex', flexDirection: 'column', gap: 1, bgcolor: 'action.hover' }}>
                   <Typography variant="caption" color="text.secondary">
-                    GCC = ECC (2 hex, from country) + first hex digit of RDS PI.
+                    GCC = first hex digit of RDS PI + ECC (2 hex, from country).
                   </Typography>
                   <Box sx={{ display: 'flex', gap: 1.5, alignItems: 'center', flexWrap: 'wrap' }}>
                     <FormControl size="small" sx={{ minWidth: 200 }}>
@@ -224,7 +224,7 @@ export function RadioDnsRetrieve({ onIngested }: Props) {
                       <Typography variant="body2" sx={{ fontFamily: 'monospace' }}>
                         ECC = <strong>{fmHelperEcc}</strong>
                         {fmCountryNibble ? (
-                          <> + PI[0]=<em>{fmCountryNibble}</em> &rarr; GCC = <strong>{fmComputedGcc}</strong></>
+                          <> &rarr; GCC = PI[0]=<em>{fmCountryNibble}</em> + ECC &rarr; <strong>{fmComputedGcc}</strong></>
                         ) : (
                           <> &mdash; enter PI above</>
                         )}
@@ -263,8 +263,8 @@ export function RadioDnsRetrieve({ onIngested }: Props) {
                   onChange={(e) => {
                     const v = e.target.value.replace(/[^0-9a-fA-F]/g, '').toLowerCase();
                     setDabEid(v);
-                    if (v.length >= 1 && dabGcc.length === 3 && dabGcc[2] === '?') {
-                      setDabGcc(dabGcc.slice(0, 2) + v[0]);
+                    if (v.length >= 1 && dabGcc.length === 3 && dabGcc[0] === '?') {
+                      setDabGcc(v[0] + dabGcc.slice(1, 3));
                     }
                   }}
                   helperText="4 hex" />
@@ -279,14 +279,14 @@ export function RadioDnsRetrieve({ onIngested }: Props) {
               </Box>
               {dabGccMismatch && (
                 <Typography variant="caption" color="warning.main">
-                  GCC third digit (<strong>{dabGcc[2]}</strong>) does not match the first digit of EId (<strong>{dabEid[0]}</strong>). GCC should be ECC + EId[0].
+                  GCC first digit (<strong>{dabGcc[0]}</strong>) does not match the first digit of EId (<strong>{dabEid[0]}</strong>). GCC should be EId[0] + ECC.
                 </Typography>
               )}
               <Collapse in={dabHelperOpen}>
                 <Box sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 1, p: 1.5,
                   display: 'flex', flexDirection: 'column', gap: 1, bgcolor: 'action.hover' }}>
                   <Typography variant="caption" color="text.secondary">
-                    GCC = ECC (2 hex, from country) + first hex digit of EId.
+                    GCC = first hex digit of EId + ECC (2 hex, from country).
                   </Typography>
                   <Box sx={{ display: 'flex', gap: 1.5, alignItems: 'center', flexWrap: 'wrap' }}>
                     <FormControl size="small" sx={{ minWidth: 200 }}>
@@ -302,14 +302,14 @@ export function RadioDnsRetrieve({ onIngested }: Props) {
                       <Typography variant="body2" sx={{ fontFamily: 'monospace' }}>
                         ECC = <strong>{dabHelperEcc}</strong>
                         {dabEid.length >= 1 && (
-                          <> &rarr; GCC = <strong>{dabComputedGcc}</strong> (EId[0]=<em>{dabCountryNibble}</em>)</>
+                          <> &rarr; GCC = EId[0]=<em>{dabCountryNibble}</em> + ECC &rarr; <strong>{dabComputedGcc}</strong></>
                         )}
                       </Typography>
                     )}
                     <Button size="small" variant="contained" disabled={!dabHelperEcc}
                       onClick={() => {
                         if (!dabHelperEcc) return;
-                        const gcc = dabHelperEcc + dabCountryNibble;
+                        const gcc = dabCountryNibble + dabHelperEcc;
                         setDabGcc(gcc);
                         setDabHelperOpen(false);
                       }}>

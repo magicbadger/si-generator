@@ -4,6 +4,7 @@ import {
   Button,
   Divider,
   IconButton,
+  Link,
   MenuItem,
   TextField,
   Typography,
@@ -148,7 +149,9 @@ export function StepDocumentMeta() {
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, py: 1.5 }}>
                   <LogoPreview logo={mm} />
                   <Typography variant="caption" color="text.secondary" sx={{ flex: 1, wordBreak: 'break-all' }}>
-                    {mm.url.startsWith('data:') ? '(embedded image)' : mm.url}
+                    {mm.url.startsWith('data:') ? '(embedded image)' : (
+                      <Link href={mm.url} target="_blank" rel="noopener noreferrer">{mm.url}</Link>
+                    )}
                   </Typography>
                   <IconButton size="small" onClick={() => removeLogo(mm.id)}>
                     <DeleteIcon fontSize="small" />

@@ -38,7 +38,7 @@ function parseMultimedia(mm: Record<string, string>): Multimedia {
   return {
     id: uuidv4(),
     url: mm['@_url'] || '',
-    logoType: (mm['@_type'] as Multimedia['logoType']) || 'logo_colour_square',
+    logoType: (mm['@_type'] as Multimedia['logoType']) || 'logo_unrestricted',
     mimeValue: mm['@_mimeValue'],
     width: mm['@_width'] ? parseInt(mm['@_width'], 10) : undefined,
     height: mm['@_height'] ? parseInt(mm['@_height'], 10) : undefined,

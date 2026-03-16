@@ -17,7 +17,7 @@ export function generateZonefile(meta: DocumentMeta, services: Service[]): strin
 
   for (const svc of services) {
     const name =
-      svc.shortNames[0]?.value || svc.mediumNames[0]?.value || 'Unknown';
+      svc.longNames[0]?.value || svc.mediumNames[0]?.value || svc.shortNames[0]?.value || 'Unknown';
     const target = svc.radiodns?.fqdn || 'placeholder.example.com';
 
     const records: string[] = [];

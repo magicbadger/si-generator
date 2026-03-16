@@ -27,14 +27,14 @@ function parseDabUri(uri: string) {
   const eid = m[2].toLowerCase();
   const sid = m[3].toLowerCase();
   const scids = parseInt(m[4], 10);
-  const ecc = gcc.slice(0, 2);
-  const eidCountry = gcc[2];
+  const ecc = gcc.slice(1, 3);
+  const eidCountry = gcc[0];
   return { ecc, eidCountry, eid, sid, scids };
 }
 
 function buildDabUri(ecc: string, eid: string, sid: string, scids: number): string {
   const country = eid.length >= 4 ? eid[0] : '0';
-  const gcc = ecc.toLowerCase() + country;
+  const gcc = country + ecc.toLowerCase();
   return `dab:${gcc}.${eid.toLowerCase()}.${sid.toLowerCase()}.${scids}`;
 }
 
@@ -59,7 +59,7 @@ function DabBearerForm({ bearer, onChange }: Props) {
 
   const countryNibble = eid.length >= 1 ? eid[0] : '?';
   const helperEcc = ECC_BY_COUNTRY.find((e) => e.country === helperCountry)?.ecc ?? '';
-  const computedGcc = helperEcc ? helperEcc + countryNibble : '';
+  const computedGcc = helperEcc ? countryNibble + helperEcc : '';
 
   const applyHelperEcc = () => {
     if (!helperEcc) return;
@@ -77,7 +77,7 @@ function DabBearerForm({ bearer, onChange }: Props) {
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
           <TextField
             label="ECC (hex, 2 digits)"
-            placeholder="ce"
+            placeholder="e1"
             value={ecc}
             size="small"
             sx={{ width: 140 }}
@@ -153,7 +153,7 @@ function DabBearerForm({ bearer, onChange }: Props) {
           }}
         >
           <Typography variant="caption" color="text.secondary">
-            GCC = ECC (2 hex) + first hex digit of EId.{' '}
+            GCC = first hex digit of EId + ECC (2 hex).{' '}
             Select your country to look up the ECC, then enter the EId to complete the GCC.
           </Typography>
           <Box sx={{ display: 'flex', gap: 1.5, alignItems: 'center', flexWrap: 'wrap' }}>
@@ -175,7 +175,7 @@ function DabBearerForm({ bearer, onChange }: Props) {
               <Typography variant="body2" sx={{ fontFamily: 'monospace' }}>
                 ECC = <strong>{helperEcc}</strong>
                 {eid.length >= 1 && (
-                  <> &rarr; GCC = <strong>{computedGcc}</strong> (EId[0]=<em>{countryNibble}</em>)</>
+                  <> &rarr; GCC = EId[0]=<em>{countryNibble}</em> + ECC &rarr; <strong>{computedGcc}</strong></>
                 )}
               </Typography>
             )}
@@ -231,7 +231,7 @@ function FmBearerForm({ bearer, onChange }: Props) {
 
   const helperEcc = ECC_BY_COUNTRY.find((e) => e.country === helperCountry)?.ecc ?? '';
   const countryNibble = pi.length >= 1 ? pi[0] : '';
-  const computedGcc = helperEcc && countryNibble ? helperEcc + countryNibble : '';
+  const computedGcc = helperEcc && countryNibble ? countryNibble + helperEcc : '';
 
   const applyComputedGcc = () => {
     if (!computedGcc) return;
@@ -321,7 +321,7 @@ function FmBearerForm({ bearer, onChange }: Props) {
           }}
         >
           <Typography variant="caption" color="text.secondary">
-            GCC = ECC (2 hex, from country) + country nibble (first hex digit of RDS PI).{' '}
+            GCC = country nibble (first hex digit of RDS PI) + ECC (2 hex, from country).{' '}
             Select your country and enter the PI code above to compute the GCC automatically.
           </Typography>
           <Box sx={{ display: 'flex', gap: 1.5, alignItems: 'center', flexWrap: 'wrap' }}>
@@ -343,7 +343,7 @@ function FmBearerForm({ bearer, onChange }: Props) {
               <Typography variant="body2" sx={{ fontFamily: 'monospace' }}>
                 ECC = <strong>{helperEcc}</strong>
                 {countryNibble ? (
-                  <> + PI[0]=<em>{countryNibble}</em> &rarr; GCC = <strong>{computedGcc}</strong></>
+                  <> &rarr; GCC = PI[0]=<em>{countryNibble}</em> + ECC &rarr; <strong>{computedGcc}</strong></>
                 ) : (
                   <> &mdash; enter PI code above</>
                 )}

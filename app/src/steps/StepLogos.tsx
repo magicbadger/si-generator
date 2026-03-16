@@ -5,6 +5,7 @@ import {
   Button,
   Divider,
   IconButton,
+  Link,
   Typography,
 } from '@mui/material';
 import AutoFixHighIcon from '@mui/icons-material/AutoFixHigh';
@@ -21,13 +22,6 @@ function logoArea(mm: Multimedia): number {
   return (mm.width ?? 0) * (mm.height ?? 0);
 }
 
-function dataUrlKb(dataUrl: string): string {
-  if (!dataUrl.startsWith('data:')) return '';
-  const b64 = dataUrl.split(',')[1] ?? '';
-  const padding = (b64.match(/=+$/) ?? [''])[0].length;
-  const bytes = (b64.length * 3) / 4 - padding;
-  return (bytes / 1024).toFixed(1) + ' KB';
-}
 
 export function StepLogos() {
   const services = useStore((s) => s.services);
@@ -97,13 +91,10 @@ export function StepLogos() {
                 <LogoPreview logo={mm} hasError={hasError(mm.id)} />
                 <Box sx={{ flex: 1, minWidth: 0 }}>
                   <Typography variant="caption" color="text.secondary" display="block" sx={{ wordBreak: 'break-all' }}>
-                    {mm.url.startsWith('data:') ? '(embedded — will be hosted via Docker export)' : mm.url}
+                    {mm.url.startsWith('data:') ? '(embedded — will be hosted via Docker export)' : (
+                      <Link href={mm.url} target="_blank" rel="noopener noreferrer">{mm.url}</Link>
+                    )}
                   </Typography>
-                  {mm.url.startsWith('data:') && (
-                    <Typography variant="caption" color="text.secondary">
-                      {dataUrlKb(mm.url)}
-                    </Typography>
-                  )}
                 </Box>
                 <IconButton size="small" onClick={() => removeLogo(mm.id)}>
                   <DeleteIcon fontSize="small" />

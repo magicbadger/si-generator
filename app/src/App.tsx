@@ -1,13 +1,15 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import {
   AppBar,
   Box,
   Button,
   Chip,
+  CssBaseline,
   Dialog,
   DialogContent,
   DialogTitle,
   IconButton,
+  ThemeProvider,
   Toolbar,
   Tooltip,
   Typography,
@@ -16,15 +18,30 @@ import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
 import RestartAltIcon from '@mui/icons-material/RestartAlt';
 import CloseIcon from '@mui/icons-material/Close';
 import LinkIcon from '@mui/icons-material/Link';
+import DarkModeIcon from '@mui/icons-material/DarkMode';
+import LightModeIcon from '@mui/icons-material/LightMode';
 import { WizardShell } from './components/WizardShell';
 import { IngestDropzone } from './components/IngestDropzone';
 import { RadioDnsRetrieve } from './components/RadioDnsRetrieve';
 import { XmlPreviewDialog } from './components/XmlPreviewDialog';
 import { useStore } from './store';
+import { createAppTheme } from './theme';
 
 export default function App() {
   const [helpOpen, setHelpOpen] = useState(false);
   const [sourceOpen, setSourceOpen] = useState(false);
+  const [darkMode, setDarkMode] = useState<boolean>(
+    () => localStorage.getItem('darkMode') === 'true'
+  );
+
+  const theme = useMemo(() => createAppTheme(darkMode ? 'dark' : 'light'), [darkMode]);
+
+  const toggleDarkMode = () => {
+    setDarkMode((prev) => {
+      localStorage.setItem('darkMode', String(!prev));
+      return !prev;
+    });
+  };
   const resetAll = useStore((s) => s.resetAll);
   const services = useStore((s) => s.services);
   const addService = useStore((s) => s.addService);
@@ -46,30 +63,38 @@ export default function App() {
   };
 
   return (
+    <ThemeProvider theme={theme}>
+      <CssBaseline />
     <Box sx={{ display: 'flex', flexDirection: 'column', height: '100vh' }}>
-      <AppBar position="static" elevation={1}>
+      <AppBar position="static" elevation={1} sx={{ bgcolor: 'primary.dark' }}>
         <Toolbar variant="dense">
           <Typography variant="h6" sx={{ flex: 1, fontWeight: 700, letterSpacing: '-0.5px' }}>
             SI File Generator
           </Typography>
-          {sourceXml && services.length > 0 && (
+          {(sourceUrl || sourceXml) && services.length > 0 && (
             <Chip
               icon={<LinkIcon />}
               label={sourceUrl ? new URL(sourceUrl).hostname : 'Imported SI.xml'}
               size="small"
-              onClick={() => setSourceOpen(true)}
+              onClick={sourceXml ? () => setSourceOpen(true) : undefined}
               sx={{
                 mr: 1,
                 color: 'inherit',
                 borderColor: 'rgba(255,255,255,0.5)',
                 '& .MuiChip-icon': { color: 'inherit' },
+                ...(!sourceXml && { cursor: 'default' }),
               }}
               variant="outlined"
               title={sourceUrl || undefined}
             />
           )}
+          <Tooltip title={darkMode ? 'Switch to light mode' : 'Switch to dark mode'}>
+            <IconButton color="inherit" size="small" onClick={toggleDarkMode} sx={{ ml: 0.5 }}>
+              {darkMode ? <LightModeIcon /> : <DarkModeIcon />}
+            </IconButton>
+          </Tooltip>
           <Tooltip title="Help">
-            <IconButton color="inherit" size="small" onClick={() => setHelpOpen(true)}>
+            <IconButton color="inherit" size="small" onClick={() => setHelpOpen(true)} sx={{ ml: 0.5 }}>
               <HelpOutlineIcon />
             </IconButton>
           </Tooltip>
@@ -150,5 +175,6 @@ export default function App() {
         </DialogContent>
       </Dialog>
     </Box>
+    </ThemeProvider>
   );
 }

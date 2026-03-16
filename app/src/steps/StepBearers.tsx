@@ -78,31 +78,33 @@ export function StepBearers() {
       </Typography>
 
       {svc.bearers.map((bearer) => (
-        <Accordion key={bearer.id} defaultExpanded>
-          <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flex: 1, mr: 1 }}>
-              <Typography variant="subtitle2">
-                {BEARER_TYPES.find((t) => t.value === bearer.type)?.label ?? bearer.type}
-              </Typography>
-              {bearer.uri && (
-                <Chip label={bearer.uri} size="small" variant="outlined" />
-              )}
-            </Box>
-            <IconButton
-              size="small"
-              onClick={(e) => { e.stopPropagation(); removeBearer(bearer.id); }}
-              sx={{ mr: 1 }}
-            >
-              <DeleteIcon fontSize="small" />
-            </IconButton>
-          </AccordionSummary>
-          <AccordionDetails>
-            <BearerForm
-              bearer={bearer}
-              onChange={(changes) => updateBearer(bearer.id, changes)}
-            />
-          </AccordionDetails>
-        </Accordion>
+        <Box key={bearer.id} sx={{ position: 'relative' }}>
+          <Accordion defaultExpanded>
+            <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flex: 1, mr: 5 }}>
+                <Typography variant="subtitle2">
+                  {BEARER_TYPES.find((t) => t.value === bearer.type)?.label ?? bearer.type}
+                </Typography>
+                {bearer.uri && (
+                  <Chip label={bearer.uri} size="small" variant="outlined" />
+                )}
+              </Box>
+            </AccordionSummary>
+            <AccordionDetails>
+              <BearerForm
+                bearer={bearer}
+                onChange={(changes) => updateBearer(bearer.id, changes)}
+              />
+            </AccordionDetails>
+          </Accordion>
+          <IconButton
+            size="small"
+            onClick={() => removeBearer(bearer.id)}
+            sx={{ position: 'absolute', top: 8, right: 40 }}
+          >
+            <DeleteIcon fontSize="small" />
+          </IconButton>
+        </Box>
       ))}
 
       <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>

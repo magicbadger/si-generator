@@ -22,7 +22,7 @@ const SIDEBAR_WIDTH = 220;
 
 const SERVICE_STEPS = 8;
 
-const STEP_LABELS = ['Names', 'Descriptions', 'Bearers', 'RadioDNS', 'Logos', 'Genre', 'Keywords', 'Links'];
+const STEP_LABELS = ['Names', 'Descriptions', 'Bearers', 'RadioDNS', 'Logos', 'Genres', 'Keywords', 'Links'];
 
 const SERVICE_STEP_COMPONENTS = [
   StepServiceNames,

@@ -90,7 +90,7 @@ export async function discoverSiUrl(authFqdn: string): Promise<string> {
   );
 }
 
-const CORS_PROXY = 'https://corsproxy.io/?url=';
+const CORS_PROXY = 'https://api.allorigins.win/get?url=';
 const MAX_SI_BYTES = 1 * 1024 * 1024; // 1 MB
 
 /** Returns true for http(s) URLs that are not private/loopback addresses. */
@@ -129,9 +129,22 @@ async function doFetch(url: string): Promise<string> {
   return text;
 }
 
+async function doFetchViaProxy(url: string): Promise<string> {
+  const resp = await fetch(CORS_PROXY + encodeURIComponent(url));
+  if (!resp.ok) throw new Error(`HTTP ${resp.status} from proxy`);
+  const json = await resp.json() as { contents?: string };
+  const text = json.contents;
+  if (typeof text !== 'string') throw new Error('Proxy returned no content');
+  if (text.length > MAX_SI_BYTES) throw new Error('Response too large from proxy');
+  if (!text.includes('serviceInformation')) {
+    throw new Error('Response via proxy does not appear to be a valid SI.xml');
+  }
+  return text;
+}
+
 /**
  * Fetch and return the SI.xml text.
- * If the direct fetch is blocked by CORS, automatically retries via corsproxy.io.
+ * If the direct fetch is blocked by CORS, automatically retries via whateverorigin.org.
  * Pass an optional onStatus callback to report progress to the UI.
  */
 export async function fetchSiXml(url: string, onStatus?: (s: string) => void): Promise<string> {
@@ -145,7 +158,7 @@ export async function fetchSiXml(url: string, onStatus?: (s: string) => void): P
     if (e instanceof TypeError) {
       onStatus?.(`Direct fetch blocked by CORS — retrying via proxy…`);
       try {
-        return await doFetch(CORS_PROXY + encodeURIComponent(url));
+        return await doFetchViaProxy(url);
       } catch (e2) {
         throw new Error(
           `CORS blocked and proxy also failed.\n${e2 instanceof Error ? e2.message : String(e2)}`
