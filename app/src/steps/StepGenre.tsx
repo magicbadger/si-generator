@@ -7,6 +7,7 @@ import {
   TextField,
   Typography,
 } from '@mui/material';
+import { useStore } from '../store';
 import DragIndicatorIcon from '@mui/icons-material/DragIndicator';
 import {
   DndContext,
@@ -23,7 +24,6 @@ import {
   arrayMove,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { useStore } from '../store';
 import { GENRE_OPTIONS } from '../constants/genres';
 import type { Genre } from '../store/types';
 
@@ -85,12 +85,15 @@ export function StepGenre() {
   const services = useStore((s) => s.services);
   const activeServiceId = useStore((s) => s.activeServiceId);
   const updateService = useStore((s) => s.updateService);
+  const validationErrors = useStore((s) => s.validationErrors);
   const [customUrn, setCustomUrn] = useState('');
 
   const sensors = useSensors(useSensor(PointerSensor));
 
   const svc = services.find((s) => s.id === activeServiceId);
   if (!svc) return <Alert severity="info">Add a service first using the sidebar.</Alert>;
+
+  const genreError = validationErrors.find((e) => e.serviceId === svc.id && e.field === 'genres');
 
   const addGenre = (href: string) => {
     if (!href || svc.genres.some((g) => g.href === href)) return;
@@ -121,6 +124,9 @@ export function StepGenre() {
       <Typography variant="body2" color="text.secondary">
         The first genre is tagged as "main"; additional genres are "secondary". Drag to reorder.
       </Typography>
+      {genreError && (
+        <Alert severity="warning">{genreError.message} {genreError.suggestion}</Alert>
+      )}
 
       <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
         <Typography variant="subtitle2">Common genres:</Typography>

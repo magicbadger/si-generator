@@ -156,6 +156,17 @@ export function validateStore(meta: DocumentMeta, services: Service[]): Validati
       }
     }
 
+    // Genres
+    const mainGenres = svc.genres.filter((g) => g.type === 'main');
+    if (mainGenres.length > 1) {
+      errors.push({
+        serviceId: sid,
+        field: 'genres',
+        message: `${mainGenres.length} genres are tagged as "main" — only one is allowed.`,
+        suggestion: 'Open the Genres tab and drag to reorder; only the first entry is treated as main.',
+      });
+    }
+
     // Multimedia
     for (const mm of svc.multimedia) {
       if (mm.logoType === 'logo_unrestricted') {

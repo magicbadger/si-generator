@@ -171,6 +171,7 @@ export function WizardShell() {
                   if (idx === 2) return e.field === 'bearers' || e.field.startsWith('bearer.');
                   if (idx === 3) return e.field === 'radiodns.serviceIdentifier';
                   if (idx === 4) return e.field.startsWith('multimedia.');
+                  if (idx === 5) return e.field === 'genres';
                   if (idx === 7) return e.field.startsWith('link.');
                   return false;
                 });
